@@ -18,6 +18,8 @@ import android.util.Log;
 import android.view.View;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
+import android.widget.ImageButton;
+import android.widget.PopupMenu;
 import android.widget.TextView;
 
 import androidx.activity.EdgeToEdge;
@@ -34,6 +36,7 @@ import java.io.IOException;
 import java.text.BreakIterator;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
@@ -41,94 +44,6 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Random;
 
-//// MainActivity.java
-//public class MainActivity extends AppCompatActivity {
-//
-//    private MediaPlayer mediaPlayer;
-//    private boolean isPlaying = false;
-//    private TextView tvStatus;
-//    private TextView tvCurrentFile;
-//
-//    @Override
-//    protected void onCreate(Bundle savedInstanceState) {
-//        super.onCreate(savedInstanceState);
-//        setContentView(R.layout.activity_main);
-//
-//        // 初始化UI组件
-//        Button btnPlay = findViewById(R.id.btn_play);
-//        Button btnPause = findViewById(R.id.btn_pause);
-//        Button btnStop = findViewById(R.id.btn_stop);
-//        tvStatus = findViewById(R.id.tv_status);
-//        tvCurrentFile = findViewById(R.id.tv_current_file);
-//
-//        // 初始化MediaPlayer
-//        mediaPlayer = new MediaPlayer();
-//
-//        // 播放按钮点击事件
-//        btnPlay.setOnClickListener(new View.OnClickListener() {
-//            @Override
-//            public void onClick(View v) {
-//                if (!isPlaying) {
-//                    try {
-//                        AssetFileDescriptor fileDescriptor = getResources().openRawResourceFd(R.raw.test_audio);
-//                        mediaPlayer.setDataSource(fileDescriptor.getFileDescriptor(),
-//                                fileDescriptor.getStartOffset(),
-//                                fileDescriptor.getLength());
-//                        fileDescriptor.close();
-//
-//                        mediaPlayer.prepare();
-//                        mediaPlayer.start();
-//
-//                        isPlaying = true;
-//                        tvStatus.setText("播放中 ▶");
-//                        tvCurrentFile.setText("当前播放：测试音频.mp3");
-//
-//                    } catch (IOException e) {
-//                        e.printStackTrace();
-//                        tvStatus.setText("播放出错！");
-//                    }
-//                }
-//            }
-//        });
-//
-//        // 暂停按钮点击事件
-//        btnPause.setOnClickListener(new View.OnClickListener() {
-//            @Override
-//            public void onClick(View v) {
-//                if (isPlaying) {
-//                    mediaPlayer.pause();
-//                    isPlaying = false;
-//                    tvStatus.setText("已暂停 ⏸");
-//                }
-//            }
-//        });
-//
-//        // 停止按钮点击事件
-//        btnStop.setOnClickListener(new View.OnClickListener() {
-//            @Override
-//            public void onClick(View v) {
-//                if (isPlaying) {
-//                    mediaPlayer.stop();
-//                    mediaPlayer.reset();
-//                    isPlaying = false;
-//                    tvStatus.setText("已停止 ⏹");
-//                    tvCurrentFile.setText("未选择文件");
-//                }
-//            }
-//        });
-//    }
-//    public void Click(View v){
-//        System.out.println("dianwo Click");
-//    }
-//    @Override
-//    protected void onDestroy() {
-//        super.onDestroy();
-//        if (mediaPlayer != null) {
-//            mediaPlayer.release();
-//            mediaPlayer = null;
-//        }
-//    }
-//}
 import android.media.MediaPlayer;
 import android.os.Bundle;
 import android.os.Handler;
@@ -142,6 +57,10 @@ import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 public class MainActivity extends AppCompatActivity {
+    private enum PlayMode { LOOP, SHUFFLE, SINGLE }
+    private PlayMode currentPlayMode = PlayMode.LOOP;
+    private List<Integer> shuffleOrder = new ArrayList<>();
+    private int shuffleIndex = 0;
 
     private MediaPlayer mediaPlayer;
     private ActivityResultLauncher<Intent> filePickerLauncher;
@@ -192,11 +111,12 @@ public class MainActivity extends AppCompatActivity {
 
 
         songList = new ArrayList<>();
+        updatePlayModeText();
         seekBar = findViewById(R.id.seekBar);
         progress = findViewById(R.id.tv_current_file);
         TextView tvStatus = findViewById(R.id.tv_status);
-        prevButton = findViewById(R.id.btn_prev);
-        nextButton = findViewById(R.id.btn_next);
+        ImageButton prevButton = findViewById(R.id.btn_prev);
+        ImageButton nextButton = findViewById(R.id.btn_next);
         mediaPlayer = MediaPlayer.create(this, R.raw.test_audio);
         seekBar.setMax(mediaPlayer.getDuration());
         TextView currentSong = findViewById(R.id.tv_current_song_name);
@@ -206,6 +126,7 @@ public class MainActivity extends AppCompatActivity {
         RecyclerView songRecyclerView = findViewById(R.id.song_recycler_view);
         songRecyclerView.setLayoutManager(new LinearLayoutManager(this));
         songRecyclerView.setAdapter(songAdapter);
+        ImageButton btnMore = findViewById(R.id.btn_more);
 //        songList = new ArrayList<>();
 //
 //        注册文件选择器
@@ -268,11 +189,11 @@ public class MainActivity extends AppCompatActivity {
         findViewById(R.id.btn_pause).setOnClickListener(v -> {
             if (mediaPlayer == null) return;
 
-            if (isPlaying && playerThread != null) {
+            if (mediaPlayer.isPlaying()) {
                 mediaPlayer.pause();
                 isPlaying = false;
                 tvStatus.setText("已暂停");
-                playerThread.interrupt();
+//                playerThread.interrupt();
                 handler.removeCallbacks(updateProgressRunnable);
 
             }
@@ -312,12 +233,14 @@ public class MainActivity extends AppCompatActivity {
 
             }
         });
-
+        //menu button
+        findViewById(R.id.btn_switch_mode).setOnClickListener(v -> switchPlayMode());
     }
 
 //    private MediaPlayer mediaPlayer = new MediaPlayer();
 
     private void playSong(int position) {
+        if (position < 0 || position >= songList.size());
         Song song = songList.get(position);
         Uri uri = Uri.parse(song.getFilePath()); // 直接解析 URI
 
@@ -329,15 +252,26 @@ public class MainActivity extends AppCompatActivity {
 
             mediaPlayer = new MediaPlayer();
             mediaPlayer.setAudioStreamType(AudioManager.STREAM_MUSIC);
-
             mediaPlayer.setDataSource(this, uri); // ✅ 使用 URI 代替文件路径
             mediaPlayer.prepare();
             mediaPlayer.start();
 
             TextView tv_status = findViewById(R.id.tv_status);
+            TextView currentSong = findViewById(R.id.tv_current_song_name);
+            //update current index of player
+            currentPlayingIndex = position;
 
             songAdapter.setPlayingPosition(position); // 更新 UI
             tv_status.setText("正在播放：" + song.getName());
+            currentSong.setText(song.getName());
+
+            //when click the music in player will init the seekbar to update the progress
+            seekBar.setMax(mediaPlayer.getDuration());
+            seekBar.setProgress(0);
+            handler.post(updateProgressRunnable);
+            //when current song have done,the next will play automatically
+            mediaPlayer.setOnCompletionListener(mp -> playNext());
+            isPlaying = true;
 
         } catch (IOException e) {
             e.printStackTrace();
@@ -349,23 +283,65 @@ public class MainActivity extends AppCompatActivity {
 
     private void playPrevious() {
         if (currentPlayingIndex > 0) {
-            playSong(currentPlayingIndex - 1);
+            playSong(--currentPlayingIndex);
         }
     }
 
+
     private void playNext() {
-        if (currentPlayingIndex < songList.size() - 1) {
-            playSong(currentPlayingIndex + 1);
+        if (currentPlayMode == PlayMode.SINGLE) {
+            playSong(currentPlayingIndex);
+        } else if (currentPlayMode == PlayMode.SHUFFLE) {
+            if (shuffleIndex >= shuffleOrder.size()) {
+                Collections.shuffle(shuffleOrder);
+                shuffleIndex = 0;
+            }
+            playSong(shuffleOrder.get(shuffleIndex++));
+        } else {
+            currentPlayingIndex = (currentPlayingIndex + 1) % songList.size();
+            playSong(currentPlayingIndex);
         }
+    }
+    //switch mode
+    private void switchPlayMode() {
+        if (currentPlayMode == PlayMode.LOOP) {
+            currentPlayMode = PlayMode.SHUFFLE;
+            shuffleOrder.clear();
+            for (int i = 0; i < songList.size(); i++) {
+                shuffleOrder.add(i);
+            }
+            Collections.shuffle(shuffleOrder);
+            shuffleIndex = 0;
+        } else if (currentPlayMode == PlayMode.SHUFFLE) {
+            currentPlayMode = PlayMode.SINGLE;
+        } else {
+            currentPlayMode = PlayMode.LOOP;
+        }
+        updatePlayModeText();
+    }
+
+    private void updatePlayModeText() {
+        String modeText;
+        switch (currentPlayMode) {
+            case SHUFFLE: modeText = "随机播放"; break;
+            case SINGLE: modeText = "单曲循环"; break;
+            default: modeText = "列表循环"; break;
+        }
+        TextView tv_playMode = findViewById(R.id.tv_play_mode);
+        tv_playMode.setText("播放模式: " + modeText);
+    }
+
+    private void generateShuffleOrder() {
+        shuffleOrder = new ArrayList<>();
+        for (int i = 0; i < songList.size(); i++) {
+            shuffleOrder.add(i);
+        }
+        Collections.shuffle(shuffleOrder);
+        shuffleIndex = 0;
     }
 //    private static final int REQUEST_CODE_PICK_SONG = 101;
     //添加歌曲
     private void addSong() {
-//        Song newSong = new Song("dacapo",0,"/sdcard/remusic");
-//        playlistManager.addSong(newSong);
-//        songList.add(newSong);
-//        songAdapter.updateData(songList);
-//        Toast.makeText(MainActivity.this,"歌曲已添加",Toast.LENGTH_SHORT);
         Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT);
         intent.setType("audio/*");
         intent.addCategory(Intent.CATEGORY_OPENABLE);
@@ -402,25 +378,8 @@ public class MainActivity extends AppCompatActivity {
                 e.printStackTrace();
             }
         }
-        // 转换为秒
+
     }
-//    public String getRealPathFromURI(Uri uri) {
-//        String filePath = null;
-//        if (uri.getScheme().equals("content")) {
-//            Cursor cursor = getContentResolver().query(uri, null, null, null, null);
-//            if (cursor != null) {
-//                int index = cursor.getColumnIndex(MediaStore.Audio.Media.DATA);
-//                if (index != -1) {
-//                    cursor.moveToFirst();
-//                    filePath = cursor.getString(index);
-//                }
-//                cursor.close();
-//            }
-//        } else if (uri.getScheme().equals("file")) {
-//            filePath = uri.getPath();
-//        }
-//        return filePath;
-//    }
 public String getRealPathFromURI(Uri uri) {
     String filePath = null;
     if (uri.getScheme().equals("content")) {
@@ -540,51 +499,5 @@ public String getRealPathFromURI(Uri uri) {
         }
     }
 }
-//    private Song song = new Song("five hundred miles.mp3",101);
-//
-//    private class SongPlayer implements Runnable{
-//        @Override
-//            public void run() {
-//                String songName = song.getName();
-//                for(int i = 0;i < song.getTimeDuration();i++){
-//                    System.out.println(i+"************");
-//                    progress.setText("歌名："+ songName +"   播放进度："+i+"%");
-//                    try {
-//                        Thread.sleep(100);
-//                    }catch (Exception ex){
-//                        ex.printStackTrace();
-//
-//                    }
-//                }
-//        }
-//
-//    }
 
-//    @SuppressLint("SetTextI18n")
-//    private void updateProgressText(int milliseconds) {
-//        // 确保 songMap 包含该 Key
-//        if (!songMap.containsKey(R.raw.test_audio)) {
-////            Log.e("DEBUG", "songMap 中未找到 R.raw.dacapo 对应的歌曲名！");
-//            return;
-//        }
-////        handler.post(() -> {
-////            if (progress != null) {
-////                progress.setText(" 播放进度: " + timeFormat.format(milliseconds));
-////            } else {
-////                Log.e("DEBUG", "TextView 为空，无法更新进度！");
-////            }
-//        }
-
-//    public void onClick(View v)
-//
-//    public void Click(View v) {
-////        System.out.println("dianwo dian wo");
-//        Random rd = new Random();
-//        int i = rd.nextInt(100);
-//        String s = i + "";
-//        TextView tv = findViewById(R.id.btn_play);
-//        tv.setText(s);
-//    }
-//
-//}
 

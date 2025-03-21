@@ -6,6 +6,7 @@
     android:orientation="vertical"
     android:padding="16dp">
 
+
     <!-- 播放状态显示 -->
     <TextView
         android:id="@+id/tv_status"
@@ -16,53 +17,88 @@
         android:textStyle="bold"
         android:layout_gravity="center"
         android:paddingBottom="8dp"/>
+    <Button
+        android:id="@+id/btn_switch_mode"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="切换模式"
+        android:layout_margin="10dp"
+        android:onClick="switchPlayMode" />
 
-    <!-- 播放控制按钮 -->
+    <TextView
+        android:id="@+id/tv_play_mode"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="播放模式: 列表循环"
+        android:textSize="16sp"
+        android:textColor="@android:color/black"
+        android:layout_margin="10dp"/>
+
+
+
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
         android:gravity="center"
-        android:layout_marginTop="16dp">
+        android:paddingVertical="8dp">
 
-        <Button
+        <!-- 更多操作菜单 -->
+        <ImageButton
+            android:id="@+id/btn_more"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:src="@android:drawable/ic_menu_more"
+            android:contentDescription="更多操作"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:layout_marginEnd="8dp"/>
+
+        <!-- 上一首 -->
+        <ImageButton
             android:id="@+id/btn_prev"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:drawableStart="@android:drawable/ic_media_previous"
-            android:text="上一首"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:src="@android:drawable/ic_media_previous"
+            android:contentDescription="上一首"
+            android:background="?attr/selectableItemBackgroundBorderless"
             android:layout_marginEnd="8dp"/>
 
-        <Button
+        <!-- 播放/暂停 -->
+        <ImageButton
             android:id="@+id/btn_play"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:drawableStart="@drawable/is_play"
-            android:text="播放"
-            android:layout_marginEnd="8dp"/>
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:src="@android:drawable/ic_media_play"
+            android:contentDescription="播放"
+            android:background="?attr/selectableItemBackgroundBorderless" />
 
-        <Button
+        <ImageButton
             android:id="@+id/btn_pause"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:drawableStart="@drawable/is_pause"
-            android:text="暂停"
-            android:layout_marginEnd="8dp"/>
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:contentDescription="暂停"
+            android:src="@android:drawable/ic_media_pause" />
 
-        <Button
+        <ImageButton
             android:id="@+id/btn_stop"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginEnd="8dp"
-            android:drawableStart="@drawable/is_stop"
-            android:text="停止" />
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:icon="@drawable/is_stop"
+            android:contentDescription="停止"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            />
 
-        <Button
+        <!-- 下一首 -->
+        <ImageButton
             android:id="@+id/btn_next"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:drawableStart="@android:drawable/ic_media_next"
-            android:text="下一首"/>
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:src="@android:drawable/ic_media_next"
+            android:contentDescription="下一首"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:layout_marginStart="16dp"/>
+
     </LinearLayout>
 
     <!-- 进度条 -->
