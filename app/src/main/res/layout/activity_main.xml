@@ -1,6 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout
-    xmlns:android="http://schemas.android.com/apk/res/android"
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
@@ -13,69 +12,81 @@
         android:id="@+id/tv_status"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
+        android:layout_gravity="center"
+        android:paddingBottom="8dp"
         android:text="等待播放..."
         android:textSize="18sp"
-        android:textStyle="bold"
-        android:layout_gravity="center"
-        android:paddingBottom="8dp"/>
+        android:textStyle="bold" />
+
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:layout_marginTop="16dp">
+        android:layout_marginTop="16dp"
+        android:orientation="horizontal">
+
         <Button
             android:id="@+id/btn_switch_mode"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="切换模式"
             android:layout_margin="10dp"
-            android:onClick="switchPlayMode" />
+            android:onClick="switchPlayMode"
+            android:text="切换模式" />
 
         <TextView
             android:id="@+id/tv_play_mode"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
+            android:layout_margin="10dp"
             android:text="播放模式: 列表循环"
-            android:textSize="16sp"
             android:textColor="@android:color/black"
-            android:layout_margin="10dp"/>
-    </LinearLayout>>
+            android:textSize="16sp" />
+    </LinearLayout>
+    >
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="horizontal"
         android:gravity="center"
+        android:orientation="horizontal"
         android:paddingVertical="8dp">
 
         <!-- 更多操作菜单 -->
-        <ImageButton
-            android:id="@+id/btn_more"
-            android:layout_width="48dp"
+<!--        <ImageButton-->
+<!--            android:id="@+id/btn_more"-->
+<!--            android:layout_width="48dp"-->
+<!--            android:layout_height="48dp"-->
+<!--            android:layout_marginEnd="8dp"-->
+<!--            android:background="?attr/selectableItemBackgroundBorderless"-->
+<!--            android:contentDescription="更多操作"-->
+<!--            android:src="@android:drawable/ic_menu_more" />-->
+
+        <Button
+            android:id="@+id/btn_delete_song"
+            android:layout_width="wrap_content"
             android:layout_height="48dp"
-            android:src="@android:drawable/ic_menu_more"
-            android:contentDescription="更多操作"
-            android:background="?attr/selectableItemBackgroundBorderless"
-            android:layout_marginEnd="8dp"/>
+            android:text="delete"
+            android:layout_margin="8dp"
+            android:background="@android:color/holo_red_light"
+            android:textColor="@android:color/white"/>
 
         <!-- 上一首 -->
         <ImageButton
             android:id="@+id/btn_prev"
             android:layout_width="48dp"
             android:layout_height="48dp"
-            android:src="@android:drawable/ic_media_previous"
-            android:contentDescription="上一首"
+            android:layout_marginEnd="8dp"
             android:background="?attr/selectableItemBackgroundBorderless"
-            android:layout_marginEnd="8dp"/>
+            android:contentDescription="上一首"
+            android:src="@android:drawable/ic_media_previous" />
 
         <!-- 播放/暂停 -->
         <ImageButton
             android:id="@+id/btn_play"
             android:layout_width="48dp"
             android:layout_height="48dp"
-            android:src="@android:drawable/ic_media_play"
+            android:background="?attr/selectableItemBackgroundBorderless"
             android:contentDescription="播放"
-            android:background="?attr/selectableItemBackgroundBorderless" />
+            android:src="@android:drawable/ic_media_play" />
 
         <ImageButton
             android:id="@+id/btn_pause"
@@ -89,20 +100,19 @@
             android:id="@+id/btn_stop"
             android:layout_width="48dp"
             android:layout_height="48dp"
-            android:icon="@drawable/is_stop"
-            android:contentDescription="停止"
             android:background="?attr/selectableItemBackgroundBorderless"
-            />
+            android:contentDescription="停止"
+            android:icon="@drawable/is_stop" />
 
         <!-- 下一首 -->
         <ImageButton
             android:id="@+id/btn_next"
             android:layout_width="48dp"
             android:layout_height="48dp"
-            android:src="@android:drawable/ic_media_next"
-            android:contentDescription="下一首"
+            android:layout_marginStart="16dp"
             android:background="?attr/selectableItemBackgroundBorderless"
-            android:layout_marginStart="16dp"/>
+            android:contentDescription="下一首"
+            android:src="@android:drawable/ic_media_next" />
 
     </LinearLayout>
 
@@ -111,7 +121,7 @@
         android:id="@+id/seekBar"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="16dp"/>
+        android:layout_marginTop="16dp" />
 
     <!-- 当前播放的文件名 -->
     <TextView
@@ -119,48 +129,48 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="12dp"
+        android:gravity="center"
         android:text="未选择文件"
         android:textSize="16sp"
-        android:textStyle="bold"
-        android:gravity="center"/>
+        android:textStyle="bold" />
 
-<!--    <TextView-->
-<!--        android:id="@+id/tv_current_file"-->
-<!--        android:layout_width="195dp"-->
-<!--        android:layout_height="wrap_content"-->
-<!--        android:layout_marginTop="16dp"-->
-<!--        android:ellipsize="end"-->
-<!--        android:maxLines="2" />-->
+    <!--    <TextView-->
+    <!--        android:id="@+id/tv_current_file"-->
+    <!--        android:layout_width="195dp"-->
+    <!--        android:layout_height="wrap_content"-->
+    <!--        android:layout_marginTop="16dp"-->
+    <!--        android:ellipsize="end"-->
+    <!--        android:maxLines="2" />-->
     <!-- 添加歌曲按钮 -->
-<!--    <Button-->
-<!--        android:id="@+id/btn_add_song"-->
-<!--        android:layout_width="wrap_content"-->
-<!--        android:layout_height="wrap_content"-->
-<!--        android:text="添加歌曲"-->
-<!--        android:layout_gravity="center"-->
-<!--        android:layout_marginTop="12dp"/>-->
+    <!--    <Button-->
+    <!--        android:id="@+id/btn_add_song"-->
+    <!--        android:layout_width="wrap_content"-->
+    <!--        android:layout_height="wrap_content"-->
+    <!--        android:text="添加歌曲"-->
+    <!--        android:layout_gravity="center"-->
+    <!--        android:layout_marginTop="12dp"/>-->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:layout_marginTop="16dp">
+        android:layout_marginTop="16dp"
+        android:orientation="horizontal">
 
         <Button
             android:id="@+id/btn_add_song"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="添加歌曲"
-            android:layout_gravity="center_vertical"/>
+            android:layout_gravity="center_vertical"
+            android:text="添加歌曲" />
 
         <TextView
             android:id="@+id/tv_current_file"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:maxLines="1"
-            android:ellipsize="end"
             android:layout_gravity="center_vertical"
-            android:layout_marginStart="8dp"/>
+            android:layout_marginStart="8dp"
+            android:layout_weight="1"
+            android:ellipsize="end"
+            android:maxLines="1" />
 
     </LinearLayout>
     <!-- 歌曲列表 -->
@@ -169,5 +179,5 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="12dp"
-        android:paddingBottom="8dp"/>
+        android:paddingBottom="8dp" />
 </LinearLayout>
