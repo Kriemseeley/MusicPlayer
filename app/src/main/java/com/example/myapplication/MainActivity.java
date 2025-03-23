@@ -27,6 +27,10 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
+
 import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -323,48 +327,96 @@ public class MainActivity extends AppCompatActivity {
         }
     }
     //save current playlist and song progress
+//    private void savePlaylist() {
+//        SharedPreferences prefs = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
+//        SharedPreferences.Editor editor = prefs.edit();
+//
+//        StringBuilder playlistData = new StringBuilder();
+//        for  (Song song : songList) {
+//            playlistData.append(song.getName()).append("|").append(song.getFilePath()).append("\n");
+//        }
+////        String playlistString = new Gson().toJson(songList);
+//        editor.putString(KEY_PLAYLIST, playlistData.toString());
+//        editor.putInt(KEY_CURRENT_SONG,mediaPlayer.getCurrentPosition());
+//        if (mediaPlayer != null) {
+//            editor.putInt(KEY_CURRENT_POSITION, mediaPlayer.getCurrentPosition());
+//        }
+//
+//    }
     private void savePlaylist() {
-        SharedPreferences prefs = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
-        SharedPreferences.Editor editor = prefs.edit();
+        SharedPreferences preferences = getSharedPreferences("PlaylistPrefs", MODE_PRIVATE);
+        SharedPreferences.Editor editor = preferences.edit();
 
-        StringBuilder playlistData = new StringBuilder();
-        for  (Song song : songList) {
-            playlistData.append(song.getName()).append("|").append(song.getFilePath()).append("\n");
-        }
-//        String playlistString = new Gson().toJson(songList);
-        editor.putString(KEY_PLAYLIST, playlistData.toString());
-        editor.putInt(KEY_CURRENT_SONG,mediaPlayer.getCurrentPosition());
-        if (mediaPlayer != null) {
-            editor.putInt(KEY_CURRENT_POSITION, mediaPlayer.getCurrentPosition());
+        JSONArray jsonArray = new JSONArray();
+        for (Song song : songList) {
+            JSONObject jsonObject = new JSONObject();
+            try {
+                jsonObject.put("title", song.getName());
+                jsonObject.put("time", song.getTimeDuration());
+                jsonObject.put("path", song.getFilePath()); // 存储歌曲路径
+                jsonArray.put(jsonObject);
+            } catch (JSONException e) {
+                e.printStackTrace();
+            }
         }
 
+        editor.putString("playlist", jsonArray.toString());
+        editor.putInt("lastPlayingIndex", currentPlayingIndex);
+        editor.apply();
     }
 
     //加载列表
+//    private void loadPlaylist() {
+//        SharedPreferences prefs = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
+//        String savedPlaylist = prefs.getString(KEY_PLAYLIST, "");
+//        int savedPosition = prefs.getInt(KEY_CURRENT_POSITION, 0);
+//        int savedSongIndex = prefs.getInt(KEY_CURRENT_SONG, 0);
+//
+//        if (!savedPlaylist.isEmpty()) {
+//            songList.clear();
+//            String[] songs = savedPlaylist.split("\n");
+//            for (String songData : songs) {
+//                String[] details = songData.split("\\|");
+//                if (details.length == 2) {
+//                    String name = details[0];
+//                    String filePath = details[1];
+//                    songList.add(new Song(name, 0, filePath));
+//                }
+//            }
+//            songAdapter.notifyDataSetChanged();
+//        }
+//        if (savedSongIndex >= 0 && savedSongIndex < songList.size()) {
+//            playSong(savedPosition);
+//            mediaPlayer.seekTo(savedPosition);
+//        }
+//    }
     private void loadPlaylist() {
-        SharedPreferences prefs = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
-        String savedPlaylist = prefs.getString(KEY_PLAYLIST, "");
-        int savedPosition = prefs.getInt(KEY_CURRENT_POSITION, 0);
-        int savedSongIndex = prefs.getInt(KEY_CURRENT_SONG, 0);
+        SharedPreferences preferences = getSharedPreferences("PlaylistPrefs", MODE_PRIVATE);
+        String jsonPlaylist = preferences.getString("playlist", null);
+        int lastPlayingIndex = preferences.getInt("lastPlayingIndex", -1);
 
-        if (!savedPlaylist.isEmpty()) {
+        if (jsonPlaylist != null) {
             songList.clear();
-            String[] songs = savedPlaylist.split("\n");
-            for (String songData : songs) {
-                String[] details = songData.split("\\|");
-                if (details.length == 2) {
-                    String name = details[0];
-                    String filePath = details[1];
-                    songList.add(new Song(name, 0, filePath));
+            try {
+                JSONArray jsonArray = new JSONArray(jsonPlaylist);
+                for (int i = 0; i < jsonArray.length(); i++) {
+                    JSONObject jsonObject = jsonArray.getJSONObject(i);
+                    String title = jsonObject.getString("title");
+                    int time = jsonObject.getInt("time");
+                    String path = jsonObject.getString("path");
+
+                    songList.add(new Song(title,time,path));
                 }
+            } catch (JSONException e) {
+                e.printStackTrace();
             }
-            songAdapter.notifyDataSetChanged();
-        }
-        if (savedSongIndex >= 0 && savedSongIndex < songList.size()) {
-            playSong(savedPosition);
-            mediaPlayer.seekTo(savedPosition);
+
+            if (!songList.isEmpty() && lastPlayingIndex >= 0 && lastPlayingIndex < songList.size()) {
+                playSong(lastPlayingIndex); // 继续播放上次的歌曲
+            }
         }
     }
+
     //switch mode
     private void switchPlayMode() {
         if (currentPlayMode == PlayMode.LOOP) {
@@ -400,14 +452,14 @@ public class MainActivity extends AppCompatActivity {
         tv_playMode.setText("播放模式: " + modeText);
     }
 
-    private void generateShuffleOrder() {
-        shuffleOrder = new ArrayList<>();
-        for (int i = 0; i < songList.size(); i++) {
-            shuffleOrder.add(i);
-        }
-        Collections.shuffle(shuffleOrder);
-        shuffleIndex = 0;
-    }
+//    private void generateShuffleOrder() {
+//        shuffleOrder = new ArrayList<>();
+//        for (int i = 0; i < songList.size(); i++) {
+//            shuffleOrder.add(i);
+//        }
+//        Collections.shuffle(shuffleOrder);
+//        shuffleIndex = 0;
+//    }
 
     //    private static final int REQUEST_CODE_PICK_SONG = 101;
     //添加歌曲
@@ -416,6 +468,7 @@ public class MainActivity extends AppCompatActivity {
         intent.setType("audio/*");
         intent.addCategory(Intent.CATEGORY_OPENABLE);
         startActivityForResult(intent, PICK_AUDIO_REQUEST);
+
     }
 
     @Override
@@ -429,6 +482,7 @@ public class MainActivity extends AppCompatActivity {
 
                 songList.add(new Song(fileName, duration, uri.toString())); // 保存 URI
                 songAdapter.notifyDataSetChanged();
+                savePlaylist();
             }
         }
     }
@@ -450,21 +504,6 @@ public class MainActivity extends AppCompatActivity {
             }
         }
 
-    }
-
-    public String getRealPathFromURI(Uri uri) {
-        String filePath = null;
-        if (uri.getScheme().equals("content")) {
-            Cursor cursor = getContentResolver().query(uri, new String[]{MediaStore.Audio.Media.DATA}, null, null, null);
-            if (cursor != null) {
-                int columnIndex = cursor.getColumnIndex(MediaStore.Audio.Media.DATA);
-                if (columnIndex != -1 && cursor.moveToFirst()) {
-                    filePath = cursor.getString(columnIndex);
-                }
-                cursor.close();
-            }
-        }
-        return filePath == null ? uri.toString() : filePath; // 确保 filePath 不为空
     }
 
     //处理音频
@@ -550,10 +589,10 @@ public class MainActivity extends AppCompatActivity {
         progress.setText("播放进度: " + timeFormat.format(current) + " / " + timeFormat.format(duration));
     }
 
-    private void startSeekBarUpdate() {
-        handler.removeCallbacks(updateSeekBar);
-        handler.post(updateSeekBar);
-    }
+//    private void startSeekBarUpdate() {
+//        handler.removeCallbacks(updateSeekBar);
+//        handler.post(updateSeekBar);
+//    }
 
     @Override
     protected void onDestroy() {
