@@ -1,7 +1,9 @@
 package com.example.myapplication;
+import static android.content.ContentValues.TAG;
+import static java.sql.DriverManager.println;
 
+import android.annotation.SuppressLint;
 import android.app.Activity;
-import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.database.Cursor;
@@ -11,11 +13,8 @@ import android.media.MediaPlayer;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.Handler;
-import android.provider.MediaStore;
 import android.provider.OpenableColumns;
 import android.util.Log;
-import android.widget.Button;
-import android.widget.ImageButton;
 import android.widget.SeekBar;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -26,6 +25,8 @@ import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
+
+import com.google.android.material.button.MaterialButton;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -41,10 +42,6 @@ import java.util.Locale;
 import java.util.Map;
 
 public class MainActivity extends AppCompatActivity {
-    private static final String PREFS_NAME = "MusicPrefs"; // SharedPreferences 名称
-    private static final String KEY_PLAYLIST = "playlist"; // 存储播放列表的 key
-    private static final String KEY_CURRENT_POSITION = "current_position"; // 存储播放进度
-    private static final String KEY_CURRENT_SONG = "current_song"; // 存储当前歌曲 index
     private static final int PICK_AUDIO_REQUEST = 1;
     private enum PlayMode {LOOP, SHUFFLE, SINGLE}
     private static final SimpleDateFormat timeFormat =
@@ -60,18 +57,9 @@ public class MainActivity extends AppCompatActivity {
     private SeekBar seekBar;
     private TextView progress = null;
     private Thread playerThread;
+    private boolean shouldAutoPlay = false;
     private boolean isSeeking = false;
     private Handler handler = new Handler();
-    private final Runnable updateSeekBar = new Runnable() {
-        @Override
-        public void run() {
-            if (mediaPlayer != null && !isSeeking) {
-                int currentPosition = mediaPlayer.getCurrentPosition();
-                seekBar.setProgress(currentPosition);
-            }
-            handler.postDelayed(this, 500);
-        }
-    };
     private volatile boolean isPlaying = false;
     private Map<Integer, String> songMap = new HashMap<>();
     private SongAdapter songAdapter;
@@ -98,8 +86,8 @@ public class MainActivity extends AppCompatActivity {
         seekBar = findViewById(R.id.seekBar);
         progress = findViewById(R.id.tv_current_file);
         TextView tvStatus = findViewById(R.id.tv_status);
-        ImageButton prevButton = findViewById(R.id.btn_prev);
-        ImageButton nextButton = findViewById(R.id.btn_next);
+        MaterialButton prevButton = findViewById(R.id.btn_prev);
+        MaterialButton nextButton = findViewById(R.id.btn_next);
         mediaPlayer = MediaPlayer.create(this, R.raw.test_audio);
         seekBar.setMax(mediaPlayer.getDuration());
         TextView currentSong = findViewById(R.id.tv_current_song_name);
@@ -108,9 +96,7 @@ public class MainActivity extends AppCompatActivity {
         RecyclerView songRecyclerView = findViewById(R.id.song_recycler_view);
         songRecyclerView.setLayoutManager(new LinearLayoutManager(this));
         songRecyclerView.setAdapter(songAdapter);
-//        ImageButton btnMore = findViewById(R.id.btn_more);
-//        songList = new ArrayList<>();
-//
+
         //加载上一次播放列表和播放进度
         loadPlaylist();
 //        注册文件选择器
@@ -126,12 +112,7 @@ public class MainActivity extends AppCompatActivity {
                         handleSelectedAudio(audioUri);
                     }
                 });
-//建立hash映射检索歌名
-        songMap.put(R.raw.test_audio, "顶上的风景");
-        Log.d("DEBUG", "songMap 初始化完毕: " + songMap.toString());
-        progress = findViewById(R.id.tv_current_file);
-
-//meidaplayer初始化
+        //meidaplayer初始化
         try {
             mediaPlayer = MediaPlayer.create(this, R.raw.test_audio);
             if (mediaPlayer != null) {
@@ -141,11 +122,18 @@ public class MainActivity extends AppCompatActivity {
         } catch (Exception e) {
             Log.e("MediaPlayer", "初始化失败", e);
         }
+//建立hash映射检索歌名
+        songMap.put(R.raw.test_audio, "顶上的风景");
+        Log.d("DEBUG", "songMap 初始化完毕: " + songMap.toString());
+        progress = findViewById(R.id.tv_current_file);
+
+
 
         TextView finalCurrentSong = currentSong;
 
         //启动按钮
         findViewById(R.id.btn_play).setOnClickListener(v -> {
+            shouldAutoPlay = true;
             if (mediaPlayer == null) return;
 
 
@@ -171,13 +159,14 @@ public class MainActivity extends AppCompatActivity {
 
 //暂停按钮
         findViewById(R.id.btn_pause).setOnClickListener(v -> {
+            shouldAutoPlay = false;
             if (mediaPlayer == null) return;
 
             if (mediaPlayer.isPlaying()) {
                 mediaPlayer.pause();
                 isPlaying = false;
                 tvStatus.setText("已暂停");
-//                playerThread.interrupt();
+                playerThread.interrupt();
                 handler.removeCallbacks(updateProgressRunnable);
 
             }
@@ -225,19 +214,24 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void playSong(int position) {
-        if (position < 0 || position >= songList.size()) ;
-        Song song = songList.get(position);
-        Uri uri = Uri.parse(song.getFilePath()); // 直接解析 URI
-
         try {
+            if (position < 0 || position >= songList.size()) {
+                return;
+            }
+            Song song = songList.get(position);
+            Uri uri = Uri.parse(song.getFilePath()); // 直接解析 URI
+
             if (mediaPlayer != null) {
-                mediaPlayer.stop();
+                if (mediaPlayer.isPlaying()) {
+                    mediaPlayer.stop();
+                }
                 mediaPlayer.release();
             }
 
+
             mediaPlayer = new MediaPlayer();
             mediaPlayer.setAudioStreamType(AudioManager.STREAM_MUSIC);
-            mediaPlayer.setDataSource(this, uri); // ✅ 使用 URI 代替文件路径
+            mediaPlayer.setDataSource(this, uri); //
             mediaPlayer.prepare();
             mediaPlayer.start();
 
@@ -260,10 +254,42 @@ public class MainActivity extends AppCompatActivity {
             //when current song have done,the next will play automatically
             mediaPlayer.setOnCompletionListener(mp -> playNext());
             isPlaying = true;
+        } catch (Exception e) {
+            Log.e("Playback", "播放失败", e);
+            Toast.makeText(this, "播放失败：" + e.getMessage(), Toast.LENGTH_SHORT).show();
+
+        }
+    }
+    private void prepareMediaPlayer(int position) {
+        if (mediaPlayer != null) {
+            mediaPlayer.release();
+            mediaPlayer = null;
+        }
+
+        Song song = songList.get(position);
+        Uri uri = Uri.parse(song.getFilePath());
+
+        try {
+            mediaPlayer = new MediaPlayer();
+            mediaPlayer.setAudioStreamType(AudioManager.STREAM_MUSIC);
+            mediaPlayer.setDataSource(this, uri);
+            mediaPlayer.prepareAsync(); // 异步准备
+
+            mediaPlayer.setOnPreparedListener(mp -> {
+                seekBar.setMax(mp.getDuration());
+                updateProgressText(0, mp.getDuration());
+                // 自动播放需要在此回调中执行
+                if (shouldAutoPlay) {
+                    mp.start();
+                    isPlaying = true;
+                    handler.post(updateProgressRunnable);
+                }
+            });
+            savePlaylist();
 
         } catch (IOException e) {
-            e.printStackTrace();
-            Toast.makeText(this, "播放失败：" + e.getMessage(), Toast.LENGTH_SHORT).show();
+            Log.e("MediaPlayer", "初始化失败", e);
+            Toast.makeText(this, "无法播放此文件", Toast.LENGTH_SHORT).show();
         }
     }
 
@@ -274,6 +300,7 @@ public class MainActivity extends AppCompatActivity {
         }
     }
     //remove song
+    @SuppressLint("NotifyDataSetChanged")
     private void removeSong(int position) {
         if (position >= 0 && position < songList.size()) {
             boolean wasPlaying = (position == currentPlayingIndex);
@@ -344,56 +371,48 @@ public class MainActivity extends AppCompatActivity {
 //
 //    }
     private void savePlaylist() {
-        SharedPreferences preferences = getSharedPreferences("PlaylistPrefs", MODE_PRIVATE);
-        SharedPreferences.Editor editor = preferences.edit();
+        try {
+            SharedPreferences preferences = getSharedPreferences("PlaylistPrefs", MODE_PRIVATE);
+            SharedPreferences.Editor editor = preferences.edit();
 
-        JSONArray jsonArray = new JSONArray();
-        for (Song song : songList) {
-            JSONObject jsonObject = new JSONObject();
-            try {
-                jsonObject.put("title", song.getName());
-                jsonObject.put("time", song.getTimeDuration());
-                jsonObject.put("path", song.getFilePath()); // 存储歌曲路径
-                jsonArray.put(jsonObject);
-            } catch (JSONException e) {
-                e.printStackTrace();
+            JSONArray jsonArray = new JSONArray();
+            for (Song song : songList) {
+                JSONObject jsonObject = new JSONObject();
+                try {
+                    jsonObject.put("title", song.getName() != null ? song.getName() : "");
+                    jsonObject.put("time", song.getTimeDuration());
+                    jsonObject.put("path", song.getFilePath() != null ? song.getFilePath() : "");
+                    jsonArray.put(jsonObject);
+
+                    Log.d("Playlist", "✅ 已保存歌曲: " + song.getName());
+                } catch (JSONException e) {
+                    Log.e("Playlist", "❌ 保存歌曲失败: " + song.getName(), e);
+                }
             }
-        }
 
-        editor.putString("playlist", jsonArray.toString());
-        editor.putInt("lastPlayingIndex", currentPlayingIndex);
-        editor.apply();
+            // 添加整个 JSON 的异常捕获
+            String jsonString = jsonArray.toString();
+            editor.putString("playlist", jsonString);
+            Log.d("Playlist", "完整播放列表 JSON: " + jsonString);
+
+            editor.putInt("lastPlayingIndex", currentPlayingIndex);
+            editor.apply();
+            Log.d("Playlist", "✔ 播放列表保存成功");
+
+        } catch (Exception e) {
+            Log.e("Playlist", "‼ 保存播放列表时发生未知错误", e);
+        }
     }
 
-    //加载列表
-//    private void loadPlaylist() {
-//        SharedPreferences prefs = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
-//        String savedPlaylist = prefs.getString(KEY_PLAYLIST, "");
-//        int savedPosition = prefs.getInt(KEY_CURRENT_POSITION, 0);
-//        int savedSongIndex = prefs.getInt(KEY_CURRENT_SONG, 0);
-//
-//        if (!savedPlaylist.isEmpty()) {
-//            songList.clear();
-//            String[] songs = savedPlaylist.split("\n");
-//            for (String songData : songs) {
-//                String[] details = songData.split("\\|");
-//                if (details.length == 2) {
-//                    String name = details[0];
-//                    String filePath = details[1];
-//                    songList.add(new Song(name, 0, filePath));
-//                }
-//            }
-//            songAdapter.notifyDataSetChanged();
-//        }
-//        if (savedSongIndex >= 0 && savedSongIndex < songList.size()) {
-//            playSong(savedPosition);
-//            mediaPlayer.seekTo(savedPosition);
-//        }
-//    }
+//laodplaylist
     private void loadPlaylist() {
         SharedPreferences preferences = getSharedPreferences("PlaylistPrefs", MODE_PRIVATE);
         String jsonPlaylist = preferences.getString("playlist", null);
         int lastPlayingIndex = preferences.getInt("lastPlayingIndex", -1);
+        boolean wasPlaying = preferences.getBoolean("wasPlaying", false);
+
+        Log.d("Playlist", "Loading playlist. JSON exists: " + (jsonPlaylist != null));
+        Log.d("Playlist", "Last index: " + lastPlayingIndex + ", Was playing: " + wasPlaying);
 
         if (jsonPlaylist != null) {
             songList.clear();
@@ -405,17 +424,31 @@ public class MainActivity extends AppCompatActivity {
                     int time = jsonObject.getInt("time");
                     String path = jsonObject.getString("path");
 
-                    songList.add(new Song(title,time,path));
+                    Uri uri = Uri.parse(path);
+                    try {
+                        getContentResolver().takePersistableUriPermission(
+                                uri,
+                                Intent.FLAG_GRANT_READ_URI_PERMISSION
+                        );
+                    } catch (SecurityException e) {
+                        Log.e("URI Permission", "No permission for: " + uri);
+                        continue;
+                    }
+
+                    songList.add(new Song(title, time, path));
                 }
             } catch (JSONException e) {
                 e.printStackTrace();
             }
 
-            if (!songList.isEmpty() && lastPlayingIndex >= 0 && lastPlayingIndex < songList.size()) {
-                playSong(lastPlayingIndex); // 继续播放上次的歌曲
-            }
+            handler.postDelayed(() -> {
+                if (lastPlayingIndex >= 0 && lastPlayingIndex < songList.size()) {
+                    prepareMediaPlayer(lastPlayingIndex); // 准备播放器但不立即播放
+                }
+            }, 500);
         }
     }
+
 
     //switch mode
     private void switchPlayMode() {
@@ -468,6 +501,7 @@ public class MainActivity extends AppCompatActivity {
         intent.setType("audio/*");
         intent.addCategory(Intent.CATEGORY_OPENABLE);
         startActivityForResult(intent, PICK_AUDIO_REQUEST);
+        savePlaylist();
 
     }
 
@@ -532,6 +566,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void stopPlayback() {
+        shouldAutoPlay = false;
         if (mediaPlayer != null) {
             if (mediaPlayer.isPlaying()) {
                 mediaPlayer.stop(); // 停止播放
@@ -589,15 +624,11 @@ public class MainActivity extends AppCompatActivity {
         progress.setText("播放进度: " + timeFormat.format(current) + " / " + timeFormat.format(duration));
     }
 
-//    private void startSeekBarUpdate() {
-//        handler.removeCallbacks(updateSeekBar);
-//        handler.post(updateSeekBar);
-//    }
 
     @Override
     protected void onDestroy() {
-        super.onDestroy();
-        savePlaylist();//退出时保存
+        savePlaylist();
+        super.onDestroy();//退出时保存
         if (mediaPlayer != null) {
             mediaPlayer.release();
         }
