@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
@@ -7,7 +8,7 @@
     android:padding="16dp">
 
 
-    <!-- 播放状态显示 -->
+<!-- 播放状态显示 -->
     <TextView
         android:id="@+id/tv_status"
         android:layout_width="wrap_content"
@@ -24,24 +25,27 @@
         android:layout_marginTop="16dp"
         android:orientation="horizontal">
 
-        <Button
+
+        <com.google.android.material.button.MaterialButton
             android:id="@+id/btn_switch_mode"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_margin="10dp"
-            android:onClick="switchPlayMode"
-            android:text="切换模式" />
+            style="@style/IconOnlyButton"
+            android:layout_width="@dimen/icon_button_size"
+            android:layout_height="@dimen/icon_button_size"
+            android:contentDescription="@string/switch_mode"
+            app:icon="@drawable/ic_switch_mode"
+            app:iconSize="@dimen/icon_size"
+            app:iconTint="@color/teal_700"
+            app:strokeWidth="0dp" />
 
         <TextView
             android:id="@+id/tv_play_mode"
-            android:layout_width="wrap_content"
+            android:layout_width="169dp"
             android:layout_height="wrap_content"
             android:layout_margin="10dp"
             android:text="播放模式: 列表循环"
             android:textColor="@android:color/black"
             android:textSize="16sp" />
     </LinearLayout>
-    >
 
     <LinearLayout
         android:layout_width="match_parent"
@@ -51,68 +55,80 @@
         android:paddingVertical="8dp">
 
         <!-- 更多操作菜单 -->
-<!--        <ImageButton-->
-<!--            android:id="@+id/btn_more"-->
-<!--            android:layout_width="48dp"-->
-<!--            android:layout_height="48dp"-->
-<!--            android:layout_marginEnd="8dp"-->
-<!--            android:background="?attr/selectableItemBackgroundBorderless"-->
-<!--            android:contentDescription="更多操作"-->
-<!--            android:src="@android:drawable/ic_menu_more" />-->
-
-        <Button
-            android:id="@+id/btn_delete_song"
-            android:layout_width="wrap_content"
-            android:layout_height="48dp"
-            android:text="delete"
-            android:layout_margin="8dp"
-            android:background="@android:color/holo_red_light"
-            android:textColor="@android:color/white"/>
 
         <!-- 上一首 -->
-        <ImageButton
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btn_delete_song"
+            style="@style/IconOnlyButton"
+            android:layout_width="@dimen/icon_button_size"
+            android:layout_height="@dimen/icon_button_size"
+            android:contentDescription="@string/delete"
+            app:icon="@drawable/ic_delete_song"
+            app:iconSize="@dimen/icon_size"
+            app:iconTint="@color/teal_700"
+            app:strokeWidth="0dp" />
+
+        <com.google.android.material.button.MaterialButton
             android:id="@+id/btn_prev"
-            android:layout_width="48dp"
-            android:layout_height="48dp"
-            android:layout_marginEnd="8dp"
-            android:background="?attr/selectableItemBackgroundBorderless"
-            android:contentDescription="上一首"
-            android:src="@android:drawable/ic_media_previous" />
+            style="@style/IconOnlyButton"
+            android:layout_width="@dimen/icon_button_size"
+            android:layout_height="@dimen/icon_button_size"
+            android:contentDescription="@string/prev"
+            app:icon="@drawable/ic_skip_previous"
+            app:iconTint="@color/teal_700"
+            app:iconSize="@dimen/icon_size"
+            app:strokeWidth="0dp"/>
 
-        <!-- 播放/暂停 -->
-        <ImageButton
+
+
+
+
+        <com.google.android.material.button.MaterialButton
             android:id="@+id/btn_play"
-            android:layout_width="48dp"
-            android:layout_height="48dp"
-            android:background="?attr/selectableItemBackgroundBorderless"
-            android:contentDescription="播放"
-            android:src="@android:drawable/ic_media_play" />
+            style="@style/IconOnlyButton"
+            android:layout_width="@dimen/icon_button_size"
+            android:layout_height="@dimen/icon_button_size"
+            android:contentDescription="@string/play"
+            app:icon="@drawable/ic_play_song"
+            app:iconTint="@color/teal_700"
+            app:iconSize="@dimen/icon_size"
+            app:strokeWidth="0dp"/>
 
-        <ImageButton
+
+        <com.google.android.material.button.MaterialButton
             android:id="@+id/btn_pause"
-            android:layout_width="48dp"
-            android:layout_height="48dp"
-            android:background="?attr/selectableItemBackgroundBorderless"
-            android:contentDescription="暂停"
-            android:src="@android:drawable/ic_media_pause" />
+            style="@style/IconOnlyButton"
+            android:layout_width="@dimen/icon_button_size"
+            android:layout_height="@dimen/icon_button_size"
+            android:contentDescription="@string/pause"
+            app:icon="@drawable/ic_pause_song"
+            app:iconTint="@color/teal_700"
+            app:iconSize="@dimen/icon_size"
+            app:strokeWidth="0dp"/>
 
-        <ImageButton
+
+
+        <com.google.android.material.button.MaterialButton
             android:id="@+id/btn_stop"
-            android:layout_width="48dp"
-            android:layout_height="48dp"
-            android:background="?attr/selectableItemBackgroundBorderless"
-            android:contentDescription="停止"
-            android:icon="@drawable/is_stop" />
+            style="@style/IconOnlyButton"
+            android:layout_width="@dimen/icon_button_size"
+            android:layout_height="@dimen/icon_button_size"
+            android:contentDescription="@string/stop"
+            app:icon="@drawable/ic_stop"
+            app:iconTint="@color/teal_700"
+            app:iconSize="@dimen/icon_size"
+            app:strokeWidth="0dp"/>
 
-        <!-- 下一首 -->
-        <ImageButton
+        <com.google.android.material.button.MaterialButton
             android:id="@+id/btn_next"
-            android:layout_width="48dp"
-            android:layout_height="48dp"
-            android:layout_marginStart="16dp"
-            android:background="?attr/selectableItemBackgroundBorderless"
-            android:contentDescription="下一首"
-            android:src="@android:drawable/ic_media_next" />
+            style="@style/IconOnlyButton"
+            android:layout_width="@dimen/icon_button_size"
+            android:layout_height="@dimen/icon_button_size"
+            android:contentDescription="@string/next"
+            app:icon="@drawable/ic_play_next"
+            app:iconTint="@color/teal_700"
+            app:iconSize="@dimen/icon_size"
+            app:strokeWidth="0dp"/>
 
     </LinearLayout>
 
@@ -134,34 +150,25 @@
         android:textSize="16sp"
         android:textStyle="bold" />
 
-    <!--    <TextView-->
-    <!--        android:id="@+id/tv_current_file"-->
-    <!--        android:layout_width="195dp"-->
-    <!--        android:layout_height="wrap_content"-->
-    <!--        android:layout_marginTop="16dp"-->
-    <!--        android:ellipsize="end"-->
-    <!--        android:maxLines="2" />-->
-    <!-- 添加歌曲按钮 -->
-    <!--    <Button-->
-    <!--        android:id="@+id/btn_add_song"-->
-    <!--        android:layout_width="wrap_content"-->
-    <!--        android:layout_height="wrap_content"-->
-    <!--        android:text="添加歌曲"-->
-    <!--        android:layout_gravity="center"-->
-    <!--        android:layout_marginTop="12dp"/>-->
+
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="16dp"
         android:orientation="horizontal">
 
-        <Button
-            android:id="@+id/btn_add_song"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_gravity="center_vertical"
-            android:text="添加歌曲" />
 
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btn_add_song"
+            style="@style/IconOnlyButton"
+            android:layout_width="@dimen/icon_button_size"
+            android:layout_height="@dimen/icon_button_size"
+            android:contentDescription="@string/add"
+            app:icon="@drawable/ic_add_song"
+            app:iconTint="@color/teal_700"
+            app:iconSize="@dimen/icon_size"
+            app:strokeWidth="0dp"/>
         <TextView
             android:id="@+id/tv_current_file"
             android:layout_width="0dp"
