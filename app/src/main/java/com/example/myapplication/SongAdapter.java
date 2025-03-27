@@ -11,6 +11,8 @@ import java.util.List;
 
 public class SongAdapter extends RecyclerView.Adapter<SongAdapter.SongViewHolder> {
 
+    private static final int VIEW_TYPE_EMPTY = 0;
+    private static final int VIEW_TYPE_NORMAL = 1;
     private List<Song> songList;
     private OnSongDeleteListener deleteListener;
     private OnSongClickListener listener;
@@ -59,9 +61,10 @@ public class SongAdapter extends RecyclerView.Adapter<SongAdapter.SongViewHolder
 
         // 监听点击播放
         holder.itemView.setOnClickListener(v -> {
-            if (listener != null) {
-                setPlayingPosition(position); // 更新播放状态
-                listener.onSongClick(position);
+            int adapterPosition = holder.getAdapterPosition();
+            if (adapterPosition != RecyclerView.NO_POSITION) {
+                setPlayingPosition(adapterPosition);
+                listener.onSongClick(adapterPosition);
             }
         });
 
@@ -74,16 +77,12 @@ public class SongAdapter extends RecyclerView.Adapter<SongAdapter.SongViewHolder
             return true;
         });
     }
-
+    public int getItemViewType(int position) {
+        return songList.isEmpty() ? VIEW_TYPE_EMPTY : VIEW_TYPE_NORMAL;
+    }
     @Override
     public int getItemCount() {
-        return songList.size();
-    }
-
-    // 更新歌曲列表（更高效的方式）
-    public void updateData(List<Song> newSongList) {
-        this.songList = newSongList == null ? new ArrayList<>() : newSongList;
-        notifyDataSetChanged();
+        return songList.isEmpty() ? 1 : songList.size();
     }
 
     //设定当前播放的歌曲索引
@@ -101,8 +100,4 @@ public class SongAdapter extends RecyclerView.Adapter<SongAdapter.SongViewHolder
         notifyItemRemoved(position);
     }
 
-    // 设置删除监听器
-    public void setOnSongDeleteListener(OnSongDeleteListener listener) {
-        this.deleteListener = listener;
-    }
 }
