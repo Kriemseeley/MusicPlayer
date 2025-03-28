@@ -19,8 +19,10 @@ import android.widget.Toast;
 
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
+import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.recyclerview.widget.ItemTouchHelper;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
@@ -115,11 +117,11 @@ public class MainActivity extends AppCompatActivity {
                         handleSelectedAudio(audioUri);
                     }
                 });
-        //meidaplayer初始化
+        //meidaplayer初始化\
+        mediaPlayer = new MediaPlayer(); // 创建空播放器
+        mediaPlayer.setAudioStreamType(AudioManager.STREAM_MUSIC);
         try {
-            mediaPlayer = new MediaPlayer(); // 空初始化
-            seekBar = findViewById(R.id.seekBar);
-            progress = findViewById(R.id.tv_current_file);
+            mediaPlayer.reset();
         } catch (Exception e) {
             Log.e("MediaPlayer", "初始化失败", e);
         }
@@ -130,18 +132,54 @@ public class MainActivity extends AppCompatActivity {
 
 
         TextView finalCurrentSong = currentSong;
+        ItemTouchHelper.Callback callback = new ItemTouchHelper.SimpleCallback(
+                ItemTouchHelper.UP | ItemTouchHelper.DOWN, // 允许上下拖动
+                0 // 禁用滑动删除
+        ) {
+            @Override
+            public boolean onMove(@NonNull RecyclerView recyclerView,
+                                  @NonNull RecyclerView.ViewHolder viewHolder,
+                                  @NonNull RecyclerView.ViewHolder target) {
+                // 获取拖动的位置
+                int fromPosition = viewHolder.getAdapterPosition();
+                int toPosition = target.getAdapterPosition();
+
+                // 更新播放索引
+                if (currentPlayingIndex == fromPosition) {
+                    currentPlayingIndex = toPosition;
+                } else if (fromPosition < currentPlayingIndex && toPosition >= currentPlayingIndex) {
+                    currentPlayingIndex--;
+                } else if (fromPosition > currentPlayingIndex && toPosition <= currentPlayingIndex) {
+                    currentPlayingIndex++;
+                }
+
+                // 移动歌曲并刷新列表
+                songAdapter.moveSong(fromPosition, toPosition);
+
+                // 保存新的播放列表顺序
+                savePlaylist();
+                return true;
+            }
+
+            @Override
+            public void onSwiped(@NonNull RecyclerView.ViewHolder viewHolder, int direction) {
+                // 不需要处理滑动
+            }
+        };
+
+        ItemTouchHelper itemTouchHelper = new ItemTouchHelper(callback);
+        itemTouchHelper.attachToRecyclerView(songRecyclerView);
 
         //启动按钮
         findViewById(R.id.btn_play).setOnClickListener(v -> {
+            if (songList.isEmpty()) {
+                Toast.makeText(this, "请先添加歌曲", Toast.LENGTH_SHORT).show();
+                return;
+            }
                     shouldAutoPlay = true;
-                    if (mediaPlayer == null) return;
-
-                    // 在播放按钮点击事件中：
-                    playerThread = new Thread(this::updatePlayProgress);
-                    playerThread.start(); // 确保在同步块内执行
-
-                    // 如果当前没有播放，自动播放第一首
-                    if (currentPlayingIndex == -1) {
+                    if (mediaPlayer == null && currentPlayingIndex != -1) {
+                        playSong(currentPlayingIndex);
+                    } else if (currentPlayingIndex == -1) {
                         playSong(0);
                     } else {
                         if (!mediaPlayer.isPlaying()) {
@@ -150,24 +188,11 @@ public class MainActivity extends AppCompatActivity {
                             handler.post(updateProgressRunnable);
                         }
                     }
-                });
+//            playerThread = new Thread(this::updatePlayProgress);
+//            playerThread.start(); // 确保在同步块内执行
 
-//            String currentSongName = songMap.get(R.raw.test_audio);
-//            finalCurrentSong.setText(currentSongName);
-//            if (playerThread != null && playerThread.isAlive()) {
-////                tvStatus.setText("已暂停");
-//                playerThread.interrupt();
-//                mediaPlayer.pause();
-//            }
-//
-//            // 优化播放控制逻辑
-//            if (!mediaPlayer.isPlaying()) {
-//                tvStatus.setText("播放中...");
-//                mediaPlayer.start();
-//                isPlaying = true;
-//                playerThread = new Thread(this::updatePlayProgress);
-//                playerThread.start();
-//                handler.post(updateProgressRunnable);
+        });
+
 
 //暂停按钮
         findViewById(R.id.btn_pause).setOnClickListener(v -> {
@@ -276,6 +301,13 @@ public class MainActivity extends AppCompatActivity {
                     TextView currentSong = findViewById(R.id.tv_current_song_name);
                     tvStatus.setText("正在播放：" + song.getName());
                     currentSong.setText(song.getName());
+                    mediaPlayer.setOnCompletionListener(mpCompleted -> {
+                        if (currentPlayMode == PlayMode.SINGLE) {
+                            playSong(currentPlayingIndex); // 单曲循环
+                        } else {
+                            playNext(); // 其他模式自动下一首
+                        }
+                    });
                 });
 
             } catch (IOException e) {
@@ -284,6 +316,7 @@ public class MainActivity extends AppCompatActivity {
             }
         }
     }
+
 
     private void prepareMediaPlayer(int position) {
         if (position < 0 || position >= songList.size()) return;
@@ -373,18 +406,62 @@ public class MainActivity extends AppCompatActivity {
     }
 
 
-    private void playNext() {
-        if (currentPlayMode == PlayMode.SINGLE) {
+//    private void playNext() {
+//        if (currentPlayMode == PlayMode.SINGLE) {
+//            playSong(currentPlayingIndex);
+//        } else if (currentPlayMode == PlayMode.SHUFFLE) {
+//            if (shuffleIndex >= shuffleOrder.size()) {
+//                Collections.shuffle(shuffleOrder);
+//                shuffleIndex = 0;
+//            }
+//            playSong(shuffleOrder.get(shuffleIndex++));
+//        } else {
+//            currentPlayingIndex = (currentPlayingIndex + 1) % songList.size();
+//            playSong(currentPlayingIndex);
+//        }
+//    }
+private void playNext() {
+    if (songList.isEmpty()) {
+            Toast.makeText(this, "播放列表为空", Toast.LENGTH_SHORT).show();
+            return;
+    }
+
+    // 根据播放模式选择下一首
+    switch (currentPlayMode) {
+        case SINGLE:
             playSong(currentPlayingIndex);
-        } else if (currentPlayMode == PlayMode.SHUFFLE) {
+            break;
+        case SHUFFLE:
             if (shuffleIndex >= shuffleOrder.size()) {
                 Collections.shuffle(shuffleOrder);
                 shuffleIndex = 0;
             }
-            playSong(shuffleOrder.get(shuffleIndex++));
-        } else {
-            currentPlayingIndex = (currentPlayingIndex + 1) % songList.size();
-            playSong(currentPlayingIndex);
+            int nextShufflePos = shuffleOrder.get(shuffleIndex++);
+            playSong(nextShufflePos);
+            break;
+        case LOOP:
+        default:
+            int nextPos = (currentPlayingIndex + 1) % songList.size();
+            playSong(nextPos); // 列表循环
+            break;
+    }
+}
+
+    private int getTimeDuration(Uri uri) {
+        MediaMetadataRetriever retriever = new MediaMetadataRetriever();
+        try {
+            retriever.setDataSource(this, uri);
+            String durationStr = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION);
+            return (durationStr != null) ? Integer.parseInt(durationStr) : 0; // 直接返回毫秒值
+        } catch (Exception e) {
+            e.printStackTrace();
+            return 0;
+        } finally {
+            try {
+                retriever.release();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
         }
     }
 //
@@ -576,9 +653,7 @@ public class MainActivity extends AppCompatActivity {
         if (currentPlayMode == PlayMode.LOOP) {
             currentPlayMode = PlayMode.SHUFFLE;
             shuffleOrder.clear();
-            for (int i = 0; i < songList.size(); i++) {
-                shuffleOrder.add(i);
-            }
+            for (int i = 0; i < songList.size(); i++) shuffleOrder.add(i);
             Collections.shuffle(shuffleOrder);
             shuffleIndex = 0;
         } else if (currentPlayMode == PlayMode.SHUFFLE) {
@@ -623,6 +698,7 @@ public class MainActivity extends AppCompatActivity {
         intent.setType("audio/*");
         intent.addCategory(Intent.CATEGORY_OPENABLE);
         startActivityForResult(intent, PICK_AUDIO_REQUEST);
+        intent.putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true);
         savePlaylist();
 
     }
@@ -631,36 +707,27 @@ public class MainActivity extends AppCompatActivity {
     protected void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
         if (requestCode == PICK_AUDIO_REQUEST && resultCode == RESULT_OK && data != null) {
-            Uri uri = data.getData();
-            if (uri != null) {
-                String fileName = getFileName(uri);
-                int duration = getTimeDuration(uri);
-
-                songList.add(new Song(fileName, duration, uri.toString())); // 保存 URI
-                songAdapter.notifyDataSetChanged();
-                savePlaylist();
+            // 处理多选文件
+            if (data.getClipData() != null) {
+                int count = data.getClipData().getItemCount();
+                for (int i = 0; i < count; i++) {
+                    Uri uri = data.getClipData().getItemAt(i).getUri();
+                    addSongToList(uri);
+                }
+            } else if (data.getData() != null) {
+                Uri uri = data.getData();
+                addSongToList(uri);
             }
+            savePlaylist();
         }
     }
-
-    private int getTimeDuration(Uri uri) {
-        MediaMetadataRetriever retriever = new MediaMetadataRetriever();
-        try {
-            retriever.setDataSource(this, uri);
-            String durationStr = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION);
-            return durationStr != null ? Integer.parseInt(durationStr) / 1000 : 0;
-        } catch (Exception e) {
-            e.printStackTrace();
-            return 0;
-        } finally {
-            try {
-                retriever.release();
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-        }
-
+    private void addSongToList(Uri uri) {
+        String fileName = getFileName(uri);
+        int duration = getTimeDuration(uri); // 在 MainActivity 中获取时长
+        songList.add(new Song(fileName, duration, uri.toString()));
+        songAdapter.notifyDataSetChanged();
     }
+
 
     //处理音频
     private void handleSelectedAudio(Uri audioUri) {
@@ -729,6 +796,7 @@ public class MainActivity extends AppCompatActivity {
                 if (mediaPlayer.isPlaying()) {
                     mediaPlayer.stop();
                 }
+                mediaPlayer.reset();
                 mediaPlayer.release();
                 mediaPlayer = null;
             }

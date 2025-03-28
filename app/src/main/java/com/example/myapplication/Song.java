@@ -1,5 +1,9 @@
 package com.example.myapplication;
 
+import java.text.SimpleDateFormat;
+import java.util.Date;
+import java.util.Locale;
+
 public class Song {
 
     private String name;
@@ -23,5 +27,9 @@ public class Song {
 
     public int getTimeDuration() {
         return timeDuration;
+    }
+    public String getFormattedDuration() {
+        SimpleDateFormat formatter = new SimpleDateFormat("mm:ss", Locale.getDefault());
+        return formatter.format(new Date(timeDuration));
     }
 }
