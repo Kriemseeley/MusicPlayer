@@ -16,7 +16,6 @@ import android.util.Log;
 import android.widget.SeekBar;
 import android.widget.TextView;
 import android.widget.Toast;
-
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
@@ -25,12 +24,9 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.ItemTouchHelper;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
-
 import com.google.android.material.button.MaterialButton;
-
 import org.json.JSONArray;
 import org.json.JSONObject;
-
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
@@ -39,10 +35,9 @@ import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.HashMap;
+//import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
-import java.util.Map;
 
 public class MainActivity extends AppCompatActivity {
     private static final int PICK_AUDIO_REQUEST = 1;
@@ -66,7 +61,7 @@ public class MainActivity extends AppCompatActivity {
     private boolean isSeeking = false;
     private Handler handler = new Handler();
     private volatile boolean isPlaying = false;
-    private Map<Integer, String> songMap = new HashMap<>();
+//    private Map<Integer, String> songMap = new HashMap<>();
     private SongAdapter songAdapter;
     private int currentPlayingIndex = -1;
     private Runnable updateProgressRunnable = new Runnable() {
@@ -177,6 +172,8 @@ public class MainActivity extends AppCompatActivity {
                 return;
             }
                     shouldAutoPlay = true;
+//                    int position = 0;
+//                    Song song = songList.get(position);
                     if (mediaPlayer == null && currentPlayingIndex != -1) {
                         playSong(currentPlayingIndex);
                     } else if (currentPlayingIndex == -1) {
@@ -184,6 +181,7 @@ public class MainActivity extends AppCompatActivity {
                     } else {
                         if (!mediaPlayer.isPlaying()) {
                             mediaPlayer.start();
+                            tvStatus.setText("正在播放");
                             isPlaying = true;
                             handler.post(updateProgressRunnable);
                         }
@@ -818,30 +816,30 @@ private void playNext() {
     }
 
 
-    private void updatePlayProgress() {
-        while (!Thread.currentThread().isInterrupted()) {
-            synchronized (this) {
-                if (mediaPlayer == null || !isPlaying) break;
-
-                try {
-                    final int current = mediaPlayer.getCurrentPosition();
-                    final int duration = mediaPlayer.getDuration();
-
-                    handler.post(() -> {
-                        if (mediaPlayer != null && isPlaying) {
-                            progress.setText("播放进度: " + timeFormat.format(current) +
-                                    " / " + timeFormat.format(duration));
-                        }
-                    });
-
-                    Thread.sleep(500);
-                } catch (InterruptedException | IllegalStateException e) {
-                    Thread.currentThread().interrupt(); // 正确标记中断状态
-                    Log.d("Player", "播放线程正常终止");
-                }
-            }
-        }
-    }
+//    private void updatePlayProgress() {
+//        while (!Thread.currentThread().isInterrupted()) {
+//            synchronized (this) {
+//                if (mediaPlayer == null || !isPlaying) break;
+//
+//                try {
+//                    final int current = mediaPlayer.getCurrentPosition();
+//                    final int duration = mediaPlayer.getDuration();
+//
+//                    handler.post(() -> {
+//                        if (mediaPlayer != null && isPlaying) {
+//                            progress.setText("播放进度: " + timeFormat.format(current) +
+//                                    " / " + timeFormat.format(duration));
+//                        }
+//                    });
+//
+//                    Thread.sleep(500);
+//                } catch (InterruptedException | IllegalStateException e) {
+//                    Thread.currentThread().interrupt(); // 正确标记中断状态
+//                    Log.d("Player", "播放线程正常终止");
+//                }
+//            }
+//        }
+//    }
 
     private void updateProgressText(int current, int duration) {
         progress.setText("播放进度: " + timeFormat.format(current) + " / " + timeFormat.format(duration));
