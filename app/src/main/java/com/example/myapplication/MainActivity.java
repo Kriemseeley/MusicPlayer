@@ -691,16 +691,33 @@ private void playNext() {
 
     //    private static final int REQUEST_CODE_PICK_SONG = 101;
     //添加歌曲
+//    private void addSong() {
+//        Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT);
+//        intent.setType("audio/*");
+//        intent.addCategory(Intent.CATEGORY_OPENABLE);
+//        startActivityForResult(intent, PICK_AUDIO_REQUEST);
+//        intent.putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true);
+//        savePlaylist();
+//
+//    }
+
     private void addSong() {
         Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT);
         intent.setType("audio/*");
         intent.addCategory(Intent.CATEGORY_OPENABLE);
-        startActivityForResult(intent, PICK_AUDIO_REQUEST);
+
+        // --- Add this line to enable multi-select in the file picker ---
+        // Note: Ensure this is BEFORE startActivityForResult
         intent.putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true);
-        savePlaylist();
 
+        // --- Launch the file picker ---
+        // The result will be handled in onActivityResult
+        startActivityForResult(intent, PICK_AUDIO_REQUEST);
+
+        // --- Removed savePlaylist() from here ---
+        // Playlist should be saved *after* files are successfully added in onActivityResult
+        // savePlaylist();
     }
-
     @Override
     protected void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
@@ -710,11 +727,30 @@ private void playNext() {
                 int count = data.getClipData().getItemCount();
                 for (int i = 0; i < count; i++) {
                     Uri uri = data.getClipData().getItemAt(i).getUri();
-                    addSongToList(uri);
+                    try {
+                        getContentResolver().takePersistableUriPermission(
+                                uri,
+                                Intent.FLAG_GRANT_READ_URI_PERMISSION
+                        );
+                        addSongToList(uri);
+                    } catch (SecurityException e) {
+                        Log.e("URI Permission", "No permission for: " + uri);
+                        Toast.makeText(this, "权限不足，无法添加: " + getFileName(uri), Toast.LENGTH_SHORT).show();
+                    }
                 }
-            } else if (data.getData() != null) {
+            }
+            else if (data.getData() != null) {
                 Uri uri = data.getData();
+                try {
+                    getContentResolver().takePersistableUriPermission(
+                            uri,
+                            Intent.FLAG_GRANT_READ_URI_PERMISSION
+                    );
                 addSongToList(uri);
+            } catch (SecurityException e) {
+                    Log.e("URI Permission", "Could not take permission for single URI: " + uri, e);
+                    Toast.makeText(this, "权限不足，无法添加: " + getFileName(uri), Toast.LENGTH_SHORT).show();
+                }
             }
             savePlaylist();
         }
