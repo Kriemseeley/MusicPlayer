@@ -7,8 +7,7 @@
     android:orientation="vertical"
     android:padding="16dp">
 
-
-<!-- 播放状态显示 -->
+    <!-- Play Status (Keep Existing) -->
     <TextView
         android:id="@+id/tv_status"
         android:layout_width="wrap_content"
@@ -19,172 +18,231 @@
         android:textSize="18sp"
         android:textStyle="bold" />
 
+    <!-- Play Mode (Keep Existing) -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="16dp"
+        android:layout_marginTop="8dp"
+        android:gravity="center_vertical"
         android:orientation="horizontal">
-
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btn_switch_mode"
-            style="@style/IconOnlyButton"
-            android:layout_width="@dimen/icon_button_size"
-            android:layout_height="@dimen/icon_button_size"
+            style="@style/Widget.MaterialComponents.Button.TextButton.Icon"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:minWidth="48dp"
+            android:minHeight="48dp"
             android:contentDescription="@string/switch_mode"
             app:icon="@drawable/ic_switch_mode"
-            app:iconSize="@dimen/icon_size"
-            app:iconTint="@color/teal_700"
-            app:strokeWidth="0dp" />
+            app:iconSize="24dp"
+            app:iconPadding="0dp"
+            app:iconTint="@color/teal_700" />
 
         <TextView
             android:id="@+id/tv_play_mode"
-            android:layout_width="169dp"
+            android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:layout_margin="10dp"
+            android:layout_weight="1"
+            android:layout_marginStart="8dp"
             android:text="播放模式: 列表循环"
             android:textColor="@android:color/black"
             android:textSize="16sp" />
     </LinearLayout>
 
+    <!-- Playback Controls (Keep Existing Structure) -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:gravity="center"
         android:orientation="horizontal"
+        android:layout_marginTop="8dp"
         android:paddingVertical="8dp">
 
-        <!-- 更多操作菜单 -->
-
-        <!-- 上一首 -->
+        <!-- Delete Song Button -->
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btn_delete_song"
-            style="@style/IconOnlyButton"
-            android:layout_width="@dimen/icon_button_size"
-            android:layout_height="@dimen/icon_button_size"
+            style="@style/Widget.MaterialComponents.Button.TextButton.Icon"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:minWidth="48dp"
+            android:minHeight="48dp"
+            app:iconPadding="0dp"
             android:contentDescription="@string/delete"
             app:icon="@drawable/ic_delete_song"
-            app:iconSize="@dimen/icon_size"
-            app:iconTint="@color/teal_700"
-            app:strokeWidth="0dp" />
+            app:iconSize="24dp"
+            app:iconTint="@color/teal_700" />
 
+        <!-- Previous Button -->
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btn_prev"
-            style="@style/IconOnlyButton"
-            android:layout_width="@dimen/icon_button_size"
-            android:layout_height="@dimen/icon_button_size"
+            style="@style/Widget.MaterialComponents.Button.TextButton.Icon"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:minWidth="48dp"
+            android:minHeight="48dp"
+            app:iconPadding="0dp"
             android:contentDescription="@string/prev"
             app:icon="@drawable/ic_skip_previous"
             app:iconTint="@color/teal_700"
-            app:iconSize="@dimen/icon_size"
-            app:strokeWidth="0dp"/>
+            app:iconSize="24dp" />
 
-
-
-
-
+        <!-- Play Button -->
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btn_play"
-            style="@style/IconOnlyButton"
-            android:layout_width="@dimen/icon_button_size"
-            android:layout_height="@dimen/icon_button_size"
+            style="@style/Widget.MaterialComponents.Button.TextButton.Icon"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:minWidth="48dp"
+            android:minHeight="48dp"
+            app:iconPadding="0dp"
             android:contentDescription="@string/play"
             app:icon="@drawable/ic_play_song"
             app:iconTint="@color/teal_700"
-            app:iconSize="@dimen/icon_size"
-            app:strokeWidth="0dp"/>
+            app:iconSize="32dp" />
 
-
+        <!-- Pause Button -->
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btn_pause"
-            style="@style/IconOnlyButton"
-            android:layout_width="@dimen/icon_button_size"
-            android:layout_height="@dimen/icon_button_size"
+            style="@style/Widget.MaterialComponents.Button.TextButton.Icon"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:minWidth="48dp"
+            android:minHeight="48dp"
+            app:iconPadding="0dp"
             android:contentDescription="@string/pause"
             app:icon="@drawable/ic_pause_song"
             app:iconTint="@color/teal_700"
-            app:iconSize="@dimen/icon_size"
-            app:strokeWidth="0dp"/>
+            app:iconSize="32dp" />
 
-
-
+        <!-- Stop Button -->
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btn_stop"
-            style="@style/IconOnlyButton"
-            android:layout_width="@dimen/icon_button_size"
-            android:layout_height="@dimen/icon_button_size"
+            style="@style/Widget.MaterialComponents.Button.TextButton.Icon"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:minWidth="48dp"
+            android:minHeight="48dp"
+            app:iconPadding="0dp"
             android:contentDescription="@string/stop"
             app:icon="@drawable/ic_stop"
             app:iconTint="@color/teal_700"
-            app:iconSize="@dimen/icon_size"
-            app:strokeWidth="0dp"/>
+            app:iconSize="24dp" />
 
+        <!-- Next Button -->
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btn_next"
-            style="@style/IconOnlyButton"
-            android:layout_width="@dimen/icon_button_size"
-            android:layout_height="@dimen/icon_button_size"
+            style="@style/Widget.MaterialComponents.Button.TextButton.Icon"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:minWidth="48dp"
+            android:minHeight="48dp"
+            app:iconPadding="0dp"
             android:contentDescription="@string/next"
             app:icon="@drawable/ic_play_next"
             app:iconTint="@color/teal_700"
-            app:iconSize="@dimen/icon_size"
-            app:strokeWidth="0dp"/>
+            app:iconSize="24dp" />
 
     </LinearLayout>
 
-    <!-- 进度条 -->
+    <!-- Seek Bar (Keep Existing) -->
     <SeekBar
         android:id="@+id/seekBar"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="16dp" />
+        android:layout_marginTop="8dp" />
 
-    <!-- 当前播放的文件名 -->
+    <!-- Current Song Name (Keep Existing) -->
     <TextView
         android:id="@+id/tv_current_song_name"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="12dp"
+        android:layout_marginTop="8dp"
         android:gravity="center"
-        android:text="未选择文件"
+        android:text="未选择歌曲"
         android:textSize="16sp"
-        android:textStyle="bold" />
+        android:textStyle="italic"
+        android:maxLines="1"
+        android:ellipsize="end"/>
+
+    <!-- Current Progress Text (Keep Existing) -->
+    <TextView
+        android:id="@+id/tv_current_file"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center"
+        android:layout_marginTop="4dp"
+        android:textSize="12sp"
+        android:text="播放进度: 00:00 / 00:00"
+        />
 
 
+    <!-- Playlist Selection and Management -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="16dp"
+        android:gravity="center_vertical"
         android:orientation="horizontal">
 
+        <!-- Playlist Spinner -->
+        <Spinner
+            android:id="@+id/spinner_playlists"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_marginEnd="8dp"
+            android:minHeight="48dp"
+            /> <!-- Set minHeight for touch target size -->
 
+        <!-- Add Playlist Button -->
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btn_add_playlist"
+            style="@style/Widget.MaterialComponents.Button.TextButton.Icon"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:minWidth="48dp"
+            android:minHeight="48dp"
+            app:iconPadding="0dp"
+            android:contentDescription="创建歌单"
+            app:icon="@drawable/ic_playlist_add" /> <!-- Create this drawable -->
 
+        <!-- Delete Playlist Button -->
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btn_delete_playlist"
+            style="@style/Widget.MaterialComponents.Button.TextButton.Icon"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:minWidth="48dp"
+            android:minHeight="48dp"
+            app:iconPadding="0dp"
+            android:contentDescription="删除歌单"
+            app:icon="@drawable/ic_delete_forever" /> <!-- Use a suitable delete icon -->
+
+        <!-- Add Song to Current Playlist Button -->
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btn_add_song"
-            style="@style/IconOnlyButton"
-            android:layout_width="@dimen/icon_button_size"
-            android:layout_height="@dimen/icon_button_size"
+            style="@style/Widget.MaterialComponents.Button.TextButton.Icon"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:minWidth="48dp"
+            android:minHeight="48dp"
+            app:iconPadding="0dp"
             android:contentDescription="@string/add"
             app:icon="@drawable/ic_add_song"
             app:iconTint="@color/teal_700"
-            app:iconSize="@dimen/icon_size"
-            app:strokeWidth="0dp"/>
-        <TextView
-            android:id="@+id/tv_current_file"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_gravity="center_vertical"
-            android:layout_marginStart="8dp"
-            android:layout_weight="1"
-            android:ellipsize="end"
-            android:maxLines="1" />
+            app:iconSize="24dp" />
 
     </LinearLayout>
-    <!-- 歌曲列表 -->
+
+
+    <!-- Song List RecyclerView (Use weight for flexible height) -->
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/song_recycler_view"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
+        android:layout_height="0dp"
+        android:layout_weight="1"
         android:layout_marginTop="12dp"
         android:paddingBottom="8dp" />
+
 </LinearLayout>
