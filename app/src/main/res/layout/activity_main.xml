@@ -17,6 +17,14 @@
         android:text="等待播放..."
         android:textSize="18sp"
         android:textStyle="bold" />
+    <ImageView
+        android:id="@+id/iv_cover_art"
+        android:layout_width="150dp"         android:layout_height="150dp"         android:layout_gravity="center_horizontal"
+        android:layout_marginTop="10dp"
+        android:layout_marginBottom="1dp"
+        android:scaleType="centerCrop"
+        android:contentDescription="@string/cover_art_description"
+        app:srcCompat="@drawable/default_cover_placeholder" /> <!-- Use app:srcCompat and create this placeholder -->
 
     <!-- Play Mode (Keep Existing) -->
     <LinearLayout
@@ -157,7 +165,7 @@
         android:id="@+id/tv_current_song_name"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="8dp"
+        android:layout_marginTop="4dp"
         android:gravity="center"
         android:text="未选择歌曲"
         android:textSize="16sp"

@@ -8,5 +8,6 @@
     <string name="prev">上一首</string>
     <string name="add">添加歌曲</string>
     <string name="delete">删除歌曲</string>
+    <string name="cover_art_description">Album cover art</string>
 <!--    <string name="next">下一首</string>-->
 </resources>

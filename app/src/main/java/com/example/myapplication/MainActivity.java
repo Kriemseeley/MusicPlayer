@@ -9,6 +9,8 @@ import android.media.AudioManager;
 import android.media.MediaMetadataRetriever;
 import android.media.MediaPlayer;
 import android.net.Uri;
+import java.net.URLConnection; // Needed for MimeTypeMap fallback
+import android.webkit.MimeTypeMap; // Needed for MimeTypeMap fallback
 import android.os.Bundle;
 import android.os.Handler;
 import android.provider.OpenableColumns;
@@ -33,6 +35,7 @@ import java.io.File;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
+import org.jaudiotagger.tag.reference.PictureTypes;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -55,13 +58,31 @@ import org.json.JSONException;
 import org.json.JSONObject;
 import org.json.JSONArray;
 import android.util.DisplayMetrics;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
+import android.widget.ImageView;
+import org.jaudiotagger.audio.AudioFile;
+import org.jaudiotagger.audio.AudioFileIO;
+import org.jaudiotagger.audio.exceptions.CannotReadException;
+import org.jaudiotagger.audio.exceptions.InvalidAudioFrameException;
+import org.jaudiotagger.audio.exceptions.ReadOnlyFileException;
+import org.jaudiotagger.tag.FieldKey;
+import org.jaudiotagger.tag.Tag;
+import org.jaudiotagger.tag.TagException;
+import org.jaudiotagger.tag.datatype.Artwork;
+import java.io.FileOutputStream;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 public class MainActivity extends AppCompatActivity {
     private static final int PICK_AUDIO_REQUEST = 1;
 //    public static final int VIEW_TYPE_EMPTY = 0;
 
     private enum PlayMode {LOOP, SHUFFLE, SINGLE}
-
+    private ImageView coverArtImageView; // Add reference for the ImageView
+    private ExecutorService backgroundExecutor;
     private static final SimpleDateFormat timeFormat =
             new SimpleDateFormat("mm:ss", Locale.getDefault());
     private PlayMode currentPlayMode = PlayMode.LOOP;
@@ -121,12 +142,13 @@ public class MainActivity extends AppCompatActivity {
 //        songList = new ArrayList<>();
 
         allPlaylists = new ArrayList<>();
-
+        backgroundExecutor = Executors.newSingleThreadExecutor();
         // --- Find Playlist UI Elements ---
         playlistSpinner = findViewById(R.id.spinner_playlists); // Add this ID to activity_main.xml
         btnAddPlaylist = findViewById(R.id.btn_add_playlist); // Add this ID to activity_main.xml
         btnDeletePlaylist = findViewById(R.id.btn_delete_playlist); // Add this ID to activity_main.xml
         updatePlayModeText();
+        coverArtImageView = findViewById(R.id.iv_cover_art);
         seekBar = findViewById(R.id.seekBar);
         progress = findViewById(R.id.tv_current_file);
         TextView tvStatus = findViewById(R.id.tv_status);
@@ -367,7 +389,7 @@ public class MainActivity extends AppCompatActivity {
         });
         //menu button
         findViewById(R.id.btn_switch_mode).setOnClickListener(v -> switchPlayMode());
-
+        setDefaultCoverArt();
     }
     
     private Playlist getCurrentPlaylist() {
@@ -376,7 +398,35 @@ public class MainActivity extends AppCompatActivity {
         }
         return null; // Or return a default empty playlist if preferred
     }
-    
+    private void copyUriToTempFile(Uri uri, File tempFile) throws IOException {
+        InputStream inputStream = null;
+        OutputStream outputStream = null;
+        try {
+            inputStream = getContentResolver().openInputStream(uri);
+            outputStream = new FileOutputStream(tempFile);
+            byte[] buffer = new byte[4096];
+            int bytesRead;
+            while ((bytesRead = inputStream.read(buffer)) != -1) {
+                outputStream.write(buffer, 0, bytesRead);
+            }
+            outputStream.flush();
+        } finally {
+            if (inputStream != null) {
+                try {
+                    inputStream.close();
+                } catch (IOException e) {
+                    Log.e("CoverArt", "关闭输入流失败", e);
+                }
+            }
+            if (outputStream != null) {
+                try {
+                    outputStream.close();
+                } catch (IOException e) {
+                    Log.e("CoverArt", "关闭输出流失败", e);
+                }
+            }
+        }
+    }
     private List<Song> getCurrentSongs() {
         Playlist current = getCurrentPlaylist();
         return (current != null) ? current.getSongs() : new ArrayList<>(); // Return empty list if no playlist
@@ -698,7 +748,10 @@ public class MainActivity extends AppCompatActivity {
         Song song = currentPlaylist.getSongs().get(position);
         Log.d("Playback", "Attempting to play: " + song.getName() + " at index " + position + " in playlist "
                 + currentPlaylist.getName());
-
+        setDefaultCoverArt();
+        backgroundExecutor.submit(() -> extractAndDisplayCoverArt(song));
+        setNavigationButtonsEnabled(false);
+        isPreparing = true;
         synchronized (this) {
             handler.removeCallbacks(updateProgressRunnable);
             stoppedAtIndex = -1;
@@ -742,8 +795,6 @@ public class MainActivity extends AppCompatActivity {
 
                 mediaPlayer.setOnPreparedListener(mp -> {
                     Log.d("Playback", "MediaPlayer prepared for: " + song.getName());
-                    isPreparing = false;
-                    setNavigationButtonsEnabled(true);
 
                     stoppedAtIndex = -1;
                     seekBar.setMax(mp.getDuration());
@@ -790,6 +841,7 @@ public class MainActivity extends AppCompatActivity {
                         isPreparing = false; // Preparation failed
                         setNavigationButtonsEnabled(true);
                         stopPlayback(); // Reset on error
+                        setDefaultCoverArt();
                         return true; // Indicate error was handled
                     });
 
@@ -807,6 +859,7 @@ public class MainActivity extends AppCompatActivity {
                 Toast.makeText(this, "播放失败：" + song.getName() + " - " + e.getMessage(), Toast.LENGTH_SHORT).show();
                 // Reset state if failed
                 stopPlayback();
+                setDefaultCoverArt();
             }
         }
     }
@@ -1744,6 +1797,7 @@ public class MainActivity extends AppCompatActivity {
             TextView tvStatus = findViewById(R.id.tv_status);
             currentSongTextView.setText("未选择歌曲");
             tvStatus.setText("已停止");
+            setDefaultCoverArt();
             songAdapter.setPlayingPosition(-1); // Clear highlight
 
             // Interrupt old thread if still using that pattern (updateProgressRunnable
@@ -1752,6 +1806,248 @@ public class MainActivity extends AppCompatActivity {
 
         }
     }
+    // 从 MP3 文件中提取封面图片并显示在 ImageView 上
+// 从 MP3 文件中提取封面图片并显示在 ImageView 上
+    private void setDefaultCoverArt() {
+        runOnUiThread(() -> {
+            if (coverArtImageView != null) {
+                // Use your placeholder drawable resource ID
+                coverArtImageView.setImageResource(R.drawable.default_cover_placeholder);
+            }
+        });
+    }
+
+    /**
+     * Extracts cover art from the Song's file using Jaudiotagger (in background)
+     * and updates the ImageView on the UI thread.
+     * Handles SAF URIs by copying to a temporary file.
+     * @param song The song whose cover art needs to be extracted.
+     */
+//    private void extractAndDisplayCoverArt(Song song) {
+//        // ... (null checks for song/path) ...
+//        Log.i("CoverArt", "-----------------------------------------");
+//        Log.i("CoverArt", "START Extraction for: " + song.getName() + " | URI: " + song.getFilePath());
+//        Uri uri = Uri.parse(song.getFilePath());
+//        Bitmap coverBitmap = null;
+//        File tempFile = null;
+//
+//        try {
+//            // --- Step 1: Get Original Filename and Determine Extension MORE RELIABLY ---
+//            String originalFileName = getFileNameFromUri(uri); // Use helper to get name via ContentResolver
+//            String fileExtension = ".tmp"; // Default fallback
+//
+//            if (originalFileName != null) {
+//                Log.d("CoverArt", "Original filename from ContentResolver: " + originalFileName);
+//                if (originalFileName.contains(".")) {
+//                    String extractedExt = originalFileName.substring(originalFileName.lastIndexOf('.')).toLowerCase();
+//                    // Validate the extracted extension before using it
+//                    if (isValidAudioExtension(extractedExt)) {
+//                        fileExtension = extractedExt;
+//                        Log.d("CoverArt", "Using extension from filename: " + fileExtension);
+//                    } else {
+//                        Log.w("CoverArt", "Extension from filename '" + extractedExt + "' is not a recognized audio type. Checking MIME type.");
+//                        // Fall through to MIME type check
+//                    }
+//                } else {
+//                    Log.w("CoverArt", "Filename from ContentResolver '" + originalFileName + "' has no extension. Checking MIME type.");
+//                    // Fall through to MIME type check
+//                }
+//            } else {
+//                // If ContentResolver failed to provide a name, log it and try MIME type
+//                Log.w("CoverArt", "Could not get original filename via ContentResolver. Checking MIME type.");
+//            }
+//
+//            // --- Fallback/Double Check using MIME Type ---
+//            if (fileExtension.equals(".tmp")) { // Only if extension wasn't found or valid from name
+//                String mimeType = getContentResolver().getType(uri);
+//                Log.d("CoverArt", "MIME type from ContentResolver: " + mimeType);
+//                if (mimeType != null) {
+//                    String guessedExtension = MimeTypeMap.getSingleton().getExtensionFromMimeType(mimeType);
+//                    if (guessedExtension != null) {
+//                        String formattedGuessedExt = "." + guessedExtension.toLowerCase();
+//                        if (isValidAudioExtension(formattedGuessedExt)) {
+//                            fileExtension = formattedGuessedExt;
+//                            Log.d("CoverArt", "Using extension guessed from MIME type: " + fileExtension);
+//                        } else {
+//                            Log.w("CoverArt", "Extension guessed from MIME type '" + formattedGuessedExt + "' is not a recognized audio type. Using .tmp fallback.");
+//                        }
+//                    } else {
+//                        Log.w("CoverArt", "Could not guess extension from MIME type: " + mimeType + ". Using .tmp fallback.");
+//                    }
+//                } else {
+//                    Log.w("CoverArt", "MIME type is null. Using .tmp fallback.");
+//                }
+//            }
+//
+//            // Final check before creating file
+//            Log.i("CoverArt", "Final determined extension for temp file: " + fileExtension);
+//
+//
+//            // --- Step 2: Copy URI content to a temporary file WITH determined extension ---
+//            InputStream inputStream = getContentResolver().openInputStream(uri);
+//            if (inputStream == null) {
+//                throw new IOException("Could not open InputStream for URI: " + uri);
+//            }
+//
+//            // --- Ensure cache directory exists ---
+//            File cacheDir = getCacheDir();
+//            if (!cacheDir.exists()) {
+//                cacheDir.mkdirs();
+//            }
+//
+//            // --- Create the temp file ---
+//            // Using fileExtension determined above
+//            tempFile = File.createTempFile("audio_temp_", fileExtension, cacheDir);
+//            tempFile.deleteOnExit(); // Request deletion when VM exits
+//            Log.d("CoverArt", "Temp file created: " + tempFile.getAbsolutePath());
+//
+//            // --- Copy stream logic (Log size as before) ---
+//            long totalBytesCopied = 0;
+//            try (OutputStream outputStream = new FileOutputStream(tempFile)) {
+//                byte[] buffer = new byte[8192];
+//                int bytesRead;
+//                while ((bytesRead = inputStream.read(buffer)) != -1) {
+//                    outputStream.write(buffer, 0, bytesRead);
+//                    totalBytesCopied += bytesRead;
+//                }
+//                Log.d("CoverArt", "Stream copy complete. Total bytes copied: " + totalBytesCopied);
+//            } finally {
+//                try { inputStream.close(); } catch (IOException ignored) {}
+//            }
+//
+//            if (tempFile.exists()) {
+//                Log.d("CoverArt", "Temp file size on disk: " + tempFile.length() + " bytes");
+//                // Check if size is > 0. If 0, Jaudiotagger will likely fail.
+//                if (tempFile.length() == 0 && totalBytesCopied > 0) {
+//                    Log.w("CoverArt", "Warning: Temp file size is 0 despite bytes being copied. Filesystem issue?");
+//                } else if (tempFile.length() == 0) {
+//                    Log.w("CoverArt", "Warning: Temp file size is 0. Stream likely empty or copy failed silently.");
+//                    // No point proceeding if file is empty
+//                    throw new IOException("Temporary file is empty after copy attempt.");
+//                }
+//            } else {
+//                Log.w("CoverArt", "Temp file doesn't exist after copy attempt!");
+//                throw new IOException("Temporary file missing after copy attempt.");
+//            }
+//
+//            // --- Step 3: Use Jaudiotagger on the correctly named temporary file ---
+//            Log.d("CoverArt", "Reading audio file with Jaudiotagger: " + tempFile.getName()); // Log the actual name being read
+//            AudioFile audioFile = AudioFileIO.read(tempFile); // Now reads file like audio_temp_xyz.flac
+//            Log.d("CoverArt", "AudioFile read result: " + (audioFile != null ? audioFile.getClass().getSimpleName() : "null"));
+//
+//            // ... (Rest of Jaudiotagger processing: getTag, getFirstArtwork, decode, etc.) ...
+//
+//        } catch (IOException e) {
+//            Log.e("CoverArt", "IOException during extraction for " + song.getName(), e);
+//        } catch (SecurityException e) {
+//            Log.e("CoverArt", "SecurityException (Permission?) for " + song.getName(), e);
+//        } catch (CannotReadException | TagException | ReadOnlyFileException | InvalidAudioFrameException e) {
+//            // Log the specific file name that caused the error
+//            Log.e("CoverArt", "JaudioTagger error for " + song.getName() + " (TempFile: " + (tempFile != null ? tempFile.getName() : "null") + "): " + e.getClass().getSimpleName(), e);
+//        } catch (Exception e) {
+//            Log.e("CoverArt", "Unexpected error during extraction for " + song.getName(), e);
+//        } finally {
+//            // --- Clean up the temporary file ---
+//            if (tempFile != null && tempFile.exists()) {
+//                if (tempFile.delete()) {
+//                    Log.d("CoverArt", "Deleted temp file: " + tempFile.getAbsolutePath());
+//                } else {
+//                    Log.w("CoverArt", "Failed to delete temp file: " + tempFile.getAbsolutePath());
+//                }
+//            } else {
+//                Log.d("CoverArt", "Temp file cleanup: File was null or did not exist.");
+//            }
+//        }
+//
+//        // --- Update ImageView on UI Thread ---
+//        final Bitmap finalCoverBitmap = coverBitmap; // Must be final for lambda
+//        runOnUiThread(() -> {
+//            if (coverArtImageView != null) {
+//                if (finalCoverBitmap != null) {
+//                    Log.d("CoverArt", "Setting decoded bitmap to ImageView.");
+//                    coverArtImageView.setImageBitmap(finalCoverBitmap);
+//                } else {
+//                    Log.d("CoverArt", "Setting default placeholder image.");
+//                    // Ensure default is set if extraction failed or no art found
+//                    coverArtImageView.setImageResource(R.drawable.default_cover_placeholder);
+//                }
+//            }
+//        });
+//    }
+// 添加封面提取和显示方法
+    private void extractAndDisplayCoverArt(Song song) {
+        try {
+            Uri songUri = Uri.parse(song.getFilePath());
+            File tempFile = File.createTempFile("temp_audio", ".mp3", getCacheDir());
+            copyUriToTempFile(songUri, tempFile);  // 使用已有方法复制文件
+
+            AudioFile audioFile = AudioFileIO.read(tempFile);
+            Tag tag = audioFile.getTag();
+            if (tag != null) {
+                Artwork artwork = tag.getFirstArtwork();
+                if (artwork != null) {
+                    final Bitmap coverBitmap = BitmapFactory.decodeByteArray(artwork.getBinaryData(), 0, artwork.getBinaryData().length);
+                    runOnUiThread(() -> coverArtImageView.setImageBitmap(coverBitmap));
+                    return;
+                }
+            }
+        } catch (CannotReadException | IOException | TagException | ReadOnlyFileException | InvalidAudioFrameException e) {
+            Log.e("CoverArt", "读取封面失败", e);
+        }
+
+        // 如果失败，设置默认封面
+        runOnUiThread(this::setDefaultCoverArt);
+    }
+
+    private boolean isValidAudioExtension(String extension) {
+        switch (extension) {
+            case ".mp3":
+            case ".flac":
+            case ".ogg":
+            case ".m4a":
+            case ".mp4": // Can contain audio tags
+            case ".wav": // Tag support might be limited
+            case ".aif":
+            case ".aiff":
+            case ".dsf": // DSD files
+                return true;
+            default:
+                return false;
+        }
+    }
+    /**
+     * Gets the display name of a file from a content URI.
+     * @param uri The content URI.
+     * @return The display name, or null if not found.
+     */
+    private String getFileNameFromUri(Uri uri) {
+        String fileName = null;
+        if (uri != null && "content".equals(uri.getScheme())) {
+            Cursor cursor = null;
+            try {
+                cursor = getContentResolver().query(uri, null, null, null, null);
+                if (cursor != null && cursor.moveToFirst()) {
+                    int nameIndex = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME);
+                    if (nameIndex != -1) {
+                        fileName = cursor.getString(nameIndex);
+                    }
+                }
+            } catch (Exception e) {
+                Log.e("FileNameUtil", "Error getting filename from URI: " + uri, e);
+            } finally {
+                if (cursor != null) {
+                    cursor.close();
+                }
+            }
+        }
+        // Fallback if not a content URI or query failed - try using path segments
+        if (fileName == null && uri != null) {
+            fileName = uri.getLastPathSegment();
+            // Basic sanitization if needed (e.g., remove query params, though less likely for file URIs)
+        }
+        return fileName;
+    }
+    // 设置默认封面图片的方法，需要确保该方法在类中存在
 
     @Override
     protected void onPause() {
@@ -1775,7 +2071,10 @@ public class MainActivity extends AppCompatActivity {
     protected void onDestroy() {
         super.onDestroy();
         Log.d("Lifecycle", "onDestroy called.");
-
+        if (backgroundExecutor != null && !backgroundExecutor.isShutdown()) {
+            Log.d("Lifecycle", "Shutting down background executor.");
+            backgroundExecutor.shutdown();
+        }
         // Save final state before destroying
         saveAllPlaylists(); // Save the playlist structure
         savePlaybackState(); // Save the playback position/status
