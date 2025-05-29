@@ -292,7 +292,11 @@ public class MainActivity extends AppCompatActivity {
 
         ItemTouchHelper itemTouchHelper = new ItemTouchHelper(callback);
         itemTouchHelper.attachToRecyclerView(songRecyclerView);
-
+        //添加在线歌曲 新添加
+        findViewById(R.id.btn_add_online_music).setOnClickListener(v -> {
+            Intent intent = new Intent(MainActivity.this, AddOnlineMusicActivity.class);
+            startActivityForResult(intent, 2001); // 2001为自定义请求码
+        }); 
         //启动按钮
         findViewById(R.id.btn_play).setOnClickListener(v -> {
             Playlist currentPlaylist = getCurrentPlaylist();
@@ -1660,7 +1664,8 @@ public class MainActivity extends AppCompatActivity {
                 Log.d("ActivityResult", "Successfully processed " + addedCount + " songs.");
                 // Save the updated playlist data
                 saveAllPlaylists();
-                Toast.makeText(this, "已添加 " + addedCount + " 首歌曲到 '" + playlistBeingAddedTo.getName()+"'", Toast.LENGTH_SHORT).show();
+                Toast.makeText(this, "已添加 " + addedCount + " 首歌曲到 '" + playlistBeingAddedTo.getName() + "'",
+                        Toast.LENGTH_SHORT).show();
 
                 // --- Refresh the adapter view IF the changes were made to the currently active playlist ---
                 if (playlistBeingAddedTo == getCurrentPlaylist()) { // Check if the target playlist is still the active one
@@ -1671,6 +1676,27 @@ public class MainActivity extends AppCompatActivity {
                 }
             } else {
                 Log.d("ActivityResult", "No songs were successfully added.");
+            }
+        }
+        if (requestCode == 2001 && resultCode == RESULT_OK && data != null) {
+            String name = data.getStringExtra("song_name");
+            String path = data.getStringExtra("song_path");
+            int duration = data.getIntExtra("song_duration", 0);
+
+            Playlist currentPlaylist = getCurrentPlaylist();
+            if (currentPlaylist != null) {
+                // 检查重复
+                for (Song s : currentPlaylist.getSongs()) {
+                    if (s.getFilePath().equals(path)) {
+                        Toast.makeText(this, "该在线歌曲已存在", Toast.LENGTH_SHORT).show();
+                        return;
+                    }
+                }
+                Song song = new Song(name, duration, path);
+                currentPlaylist.addSong(song);
+                saveAllPlaylists();
+                refreshCurrentPlaylistView();
+                Toast.makeText(this, "已添加在线歌曲: " + name, Toast.LENGTH_SHORT).show();
             }
         }
     }// End of onActivityResult

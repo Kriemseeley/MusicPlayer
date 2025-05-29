@@ -6,14 +6,28 @@
     android:layout_height="match_parent"
     android:orientation="vertical"
     android:padding="16dp">
-    <Button
-        android:id="@+id/btnLogout"
-        android:layout_width="wrap_content"
+      <LinearLayout
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="退出登录"
-        android:textSize="16sp"
-        android:backgroundTint="@color/gray_600"
-        android:textColor="@android:color/white"/>
+        android:layout_marginTop="8dp"
+        android:gravity="center_vertical"
+        android:orientation="horizontal">
+        <Button
+            android:id="@+id/btnLogout"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="退出登录"
+            android:textSize="16sp"
+            android:backgroundTint="@color/gray_600"
+            android:textColor="@android:color/white"/>
+        
+
+        <Button
+            android:id="@+id/btn_add_online_music"
+            android:text="添加在线歌曲"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"/>
+    </LinearLayout>
 
     <!-- Play Status (Keep Existing) -->
     <TextView
