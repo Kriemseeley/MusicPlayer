@@ -16,13 +16,18 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="12dp"/>
-
     <TextView
         android:id="@+id/tv_result"
         android:text="搜索结果将在这里显示"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="24dp"/>
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/rv_online_songs"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:layout_marginTop="16dp"/>
 
     <Button
         android:id="@+id/btn_add_online_song"

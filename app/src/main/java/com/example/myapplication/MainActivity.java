@@ -1679,24 +1679,37 @@ public class MainActivity extends AppCompatActivity {
             }
         }
         if (requestCode == 2001 && resultCode == RESULT_OK && data != null) {
-            String name = data.getStringExtra("song_name");
-            String path = data.getStringExtra("song_path");
-            int duration = data.getIntExtra("song_duration", 0);
+            ArrayList<String> names = data.getStringArrayListExtra("song_names");
+            ArrayList<String> paths = data.getStringArrayListExtra("song_paths");
+            ArrayList<Integer> durations = data.getIntegerArrayListExtra("song_durations");
 
             Playlist currentPlaylist = getCurrentPlaylist();
-            if (currentPlaylist != null) {
-                // 检查重复
-                for (Song s : currentPlaylist.getSongs()) {
-                    if (s.getFilePath().equals(path)) {
-                        Toast.makeText(this, "该在线歌曲已存在", Toast.LENGTH_SHORT).show();
-                        return;
+            if (currentPlaylist != null && names != null && paths != null && durations != null) {
+                int addCount = 0;
+                for (int i = 0; i < names.size(); i++) {
+                    String name = names.get(i);
+                    String path = paths.get(i);
+                    int duration = durations.get(i);
+                    boolean exists = false;
+                    for (Song s : currentPlaylist.getSongs()) {
+                        if (s.getFilePath().equals(path)) {
+                            exists = true;
+                            break;
+                        }
+                    }
+                    if (!exists) {
+                        Song song = new Song(name, duration, path);
+                        currentPlaylist.addSong(song);
+                        addCount++;
                     }
                 }
-                Song song = new Song(name, duration, path);
-                currentPlaylist.addSong(song);
-                saveAllPlaylists();
-                refreshCurrentPlaylistView();
-                Toast.makeText(this, "已添加在线歌曲: " + name, Toast.LENGTH_SHORT).show();
+                if (addCount > 0) {
+                    saveAllPlaylists();
+                    refreshCurrentPlaylistView();
+                    Toast.makeText(this, "已添加" + addCount + "首在线歌曲", Toast.LENGTH_SHORT).show();
+                } else {
+                    Toast.makeText(this, "所选歌曲均已存在", Toast.LENGTH_SHORT).show();
+                }
             }
         }
     }// End of onActivityResult
