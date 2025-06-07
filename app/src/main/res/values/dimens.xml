@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- 所有尺寸定义必须放在这个根标签内 -->
+    <dimen name="icon_button_size">48dp</dimen>
+    <dimen name="icon_size">32dp</dimen>
+</resources>
