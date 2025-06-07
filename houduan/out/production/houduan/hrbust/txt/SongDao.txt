@@ -1,0 +1,95 @@
+package hrbust;
+
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.util.ArrayList;
+import java.util.List;
+
+public class SongDao {
+	
+	
+	private static String url = "jdbc:mysql://39.101.73.144:3306/musicdb?serverTimezone=Asia/Shanghai"
+			+ "&useUnicode=true&characterEncoding=UTF-8";
+	private static String driverName = "com.mysql.cj.jdbc.Driver";
+	private static String username="root";
+	private static String password="root";
+
+	public List<Song> query(String[] kws)throws Exception{
+
+		String sql = "select songname,songer,songpath from song ";
+//		String where1 = "songname like %Ðì¼ÑÓ¨% or songname like %ÏëÄã%";
+//		String where2 = "songer like %Ðì¼ÑÓ¨% or songer like %ÏëÄã%";
+//
+//		String where = where1 +" or " +where2;
+
+		String where1 = createWhere("songname",kws);
+		String where2 = createWhere("songer",kws);
+
+		String where = where1 +" or " +where2;
+
+		String select = sql + " where " + where;
+
+		System.out.println(select);
+
+		Connection conn = openConnection();
+		PreparedStatement pst = conn.prepareStatement(select);
+		ResultSet rs = pst.executeQuery();
+
+		List<Song> songlist  = new ArrayList();
+		while(rs.next()){
+			Song song = new Song();
+			song.setSongname(rs.getString(1));
+			song.setSonger(rs.getString(2));
+			song.setSongpath(rs.getString(3));
+			songlist.add(song);
+		}
+
+
+		rs.close();
+		pst.close();
+		conn.close();
+
+		return songlist;
+
+	}
+
+
+	private String createWhere(String fieldname,String[] kws){
+		StringBuilder sb = new StringBuilder();
+		sb.append(fieldname+" like "+"'%"+kws[0]+"%' ");
+		if(kws.length > 1){
+			for(int i = 1;i< kws.length;i ++){
+				sb.append(" or "+fieldname+" like "+"'%"+kws[i]+"%' ");
+			}
+		}
+		return sb.toString();
+	}
+
+
+	public void insert(Song song)throws Exception{
+		String insertsql = "insert into song(songid,songname,songer,songpath) values(?,?,?,?)";
+//		song.setSongid(generateId());
+		Connection conn = openConnection();
+		PreparedStatement pst =  conn.prepareStatement(insertsql);
+		pst.setString(1, song.getSongid());
+		pst.setString(2,song.getSongname());
+		pst.setString(3,song.getSonger());
+		pst.setString(4,song.getSongpath());
+		pst.executeUpdate();
+		
+		pst.close();
+		conn.close();
+	}
+	
+	
+	private Connection openConnection()throws Exception{
+		Class.forName(driverName);
+		Connection conn = DriverManager.getConnection(url, username, password);
+		return conn;
+	}
+	
+
+
+}

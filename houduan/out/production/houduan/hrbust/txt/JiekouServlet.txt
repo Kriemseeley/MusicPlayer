@@ -1,0 +1,68 @@
+package hrbust;
+
+import java.io.IOException;
+import java.util.List;
+
+import javax.servlet.ServletException;
+import javax.servlet.annotation.WebServlet;
+import javax.servlet.http.HttpServlet;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+
+/**
+ * Servlet implementation class JiekouServlet
+ */
+@WebServlet("/jiekou")
+public class JiekouServlet extends HttpServlet {
+    private static final long serialVersionUID = 1L;
+    SongDao dao = new SongDao();
+
+
+    //http://localhost:2024/jiekou?kw=徐佳莹  想你
+
+    /**
+     * @see HttpServlet#doGet(HttpServletRequest request, HttpServletResponse response)
+     */
+    protected void service(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
+        // TODO Auto-generated method stub
+        String keywords = request.getParameter("kw");
+        String[] kws = keywords.split("\\s+");
+        System.out.println(keywords);
+        System.out.println(kws.length);
+
+        String hostandport = getHostPost(request);
+
+        try {
+            List<Song> songlist =  dao.query(kws);
+
+            StringBuffer sb = new StringBuffer();
+            sb.append("[");
+            // 遍历歌曲列表
+            for (int i = 0; i < songlist.size(); i++) {
+                Song song = songlist.get(i);
+                song.setSongpath(hostandport + song.getSongpath());
+                sb.append(song.toJson());
+                // 如果不是最后一个元素，则添加逗号
+                if (i < songlist.size() - 1) {
+                    sb.append(",");
+                }
+            }
+
+            sb.append("]");
+
+            response.setContentType("application/json;charset=utf-8");
+            response.getWriter().write(sb.toString());
+//            System.out.println(songlist.size());
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+        //把songlist转换成json字符串传递给前端
+
+    }
+
+    private String getHostPost(HttpServletRequest request) {
+        return "http://" + request.getServerName() + ":" + request.getServerPort();
+    }
+
+
+}
