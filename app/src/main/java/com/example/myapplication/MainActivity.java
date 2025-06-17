@@ -66,6 +66,8 @@ import android.util.DisplayMetrics;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.widget.ImageView;
+import android.widget.Toolbar;
+
 import org.jaudiotagger.audio.AudioFile;
 import org.jaudiotagger.audio.AudioFileIO;
 import org.jaudiotagger.audio.exceptions.CannotReadException;
@@ -87,7 +89,7 @@ import okhttp3.HttpUrl;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.Response;
-
+import com.google.android.material.appbar.MaterialToolbar;
 public class MainActivity extends AppCompatActivity {
     private static final int PICK_AUDIO_REQUEST = 1;
     // public static final int VIEW_TYPE_EMPTY = 0;
@@ -223,6 +225,8 @@ public class MainActivity extends AppCompatActivity {
 //            startActivity(intent);
 //            finish();
 //        });
+        MaterialToolbar toolbar = findViewById(R.id.toolbar); // ID 改成你 XML 里的 toolbar ID
+        setSupportActionBar(toolbar);
         btnDeletePlaylist.setOnClickListener(v -> showDeletePlaylistConfirmation());
         mediaPlayer = new MediaPlayer();
         mediaPlayer.setAudioStreamType(AudioManager.STREAM_MUSIC);
@@ -373,7 +377,7 @@ public class MainActivity extends AppCompatActivity {
                 stoppedAtIndex = -1;
             }
         });
-
+       
         // 暂停按钮
         findViewById(R.id.btn_pause).setOnClickListener(v -> {
             animateButton(v);
@@ -481,21 +485,25 @@ public class MainActivity extends AppCompatActivity {
         return true;
     }
 
+   
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
+        Log.d("MenuDebug", "菜单点击: " + item.getItemId());
         int id = item.getItemId();
         if (id == R.id.action_add_online_music) {
-            Intent intent = new Intent(MainActivity.this, AddOnlineMusicActivity.class);
-            startActivityForResult(intent, 2001);
+            // 跳转到添加在线音乐页面
+            Intent addIntent = new Intent(this, AddOnlineMusicActivity.class);
+            startActivity(addIntent);
             return true;
         } else if (id == R.id.btnLogout) {
             SharedPreferences.Editor editor = getSharedPreferences("user_info", MODE_PRIVATE).edit();
-            editor.putBoolean("isLogin", false);
+            editor.clear();
             editor.apply();
-            Intent intent = new Intent(MainActivity.this, LoginActivity.class);
-            intent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_NEW_TASK);
-            startActivity(intent);
-            finish();
+            // 跳转到登录页并清空返回栈
+            Intent logoutIntent = new Intent(this, LoginActivity.class);
+            logoutIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+            startActivity(logoutIntent);
+            finishAffinity(); // 彻底清理Activity栈
             return true;
         }
         return super.onOptionsItemSelected(item);
