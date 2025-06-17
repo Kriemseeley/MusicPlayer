@@ -1,7 +1,41 @@
+<?xml version="1.0" encoding="utf-8"?>
 <resources xmlns:tools="http://schemas.android.com/tools">
     <!-- Base application theme. -->
-    <style name="Base.Theme.MyApplication" parent="Theme.Material3.DayNight.NoActionBar">
-        <!-- Customize your dark theme here. -->
-        <!-- <item name="colorPrimary">@color/my_dark_primary</item> -->
+    <style name="Theme.MusicPlayer" parent="Theme.Material3.DayNight.NoActionBar">
+        <!-- 主要颜色 -->
+        <item name="colorPrimary">@color/teal_200</item>
+        <item name="colorPrimaryVariant">@color/teal_300</item>
+        <item name="colorOnPrimary">@color/black</item>
+        
+        <!-- 次要颜色 -->
+        <item name="colorSecondary">@color/teal_700</item>
+        <item name="colorSecondaryVariant">@color/teal_800</item>
+        <item name="colorOnSecondary">@color/white</item>
+        
+        <!-- 表面颜色 -->
+        <item name="colorSurface">@color/gray_900</item>
+        <item name="colorOnSurface">@color/white</item>
+        <item name="colorSurfaceVariant">@color/gray_800</item>
+        <item name="colorOnSurfaceVariant">@color/gray_300</item>
+        
+        <!-- 背景颜色 -->
+        <item name="android:colorBackground">@color/gray_900</item>
+        <item name="colorOnBackground">@color/white</item>
+        
+        <!-- 状态栏颜色 -->
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+        
+        <!-- 系统UI可见性 -->
+        <item name="android:windowLightStatusBar">false</item>
+        <item name="android:windowLightNavigationBar">false</item>
+        
+        <!-- 动画持续时间 -->
+        <item name="android:windowActivityTransitions">true</item>
+        <item name="android:windowEnterTransition">@anim/fade_through</item>
+        <item name="android:windowExitTransition">@anim/fade_through</item>
+        
+        <!-- 按钮样式 -->
+        <item name="materialButtonStyle">@style/Widget.MusicPlayer.Button</item>
     </style>
 </resources>

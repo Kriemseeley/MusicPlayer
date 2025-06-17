@@ -3,4 +3,30 @@
     <!-- 所有尺寸定义必须放在这个根标签内 -->
     <dimen name="icon_button_size">48dp</dimen>
     <dimen name="icon_size">32dp</dimen>
+
+    <!-- 基础间距 -->
+    <dimen name="spacing_xs">4dp</dimen>
+    <dimen name="spacing_sm">8dp</dimen>
+    <dimen name="spacing_md">16dp</dimen>
+    <dimen name="spacing_lg">24dp</dimen>
+    <dimen name="spacing_xl">32dp</dimen>
+
+    <!-- 组件尺寸 -->
+    <dimen name="cover_art_size">200dp</dimen>
+    <dimen name="control_button_size">48dp</dimen>
+    <dimen name="icon_size_sm">24dp</dimen>
+    <dimen name="icon_size_md">32dp</dimen>
+    <dimen name="icon_size_lg">40dp</dimen>
+
+    <!-- 文字大小 -->
+    <dimen name="text_size_sm">14sp</dimen>
+    <dimen name="text_size_md">16sp</dimen>
+    <dimen name="text_size_lg">20sp</dimen>
+    <dimen name="text_size_xl">24sp</dimen>
+
+    <!-- 圆角半径 -->
+    <dimen name="corner_radius_sm">4dp</dimen>
+    <dimen name="corner_radius_md">8dp</dimen>
+    <dimen name="corner_radius_lg">16dp</dimen>
+    <dimen name="corner_radius_xl">24dp</dimen>
 </resources>

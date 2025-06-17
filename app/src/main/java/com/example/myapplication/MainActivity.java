@@ -10,6 +10,10 @@ import android.media.MediaMetadataRetriever;
 import android.media.MediaPlayer;
 import android.net.Uri;
 import java.net.URLConnection; // Needed for MimeTypeMap fallback
+
+import android.view.Menu;
+import android.view.MenuItem;
+import android.view.Window;
 import android.webkit.MimeTypeMap; // Needed for MimeTypeMap fallback
 import android.os.Bundle;
 import android.os.Handler;
@@ -77,15 +81,24 @@ import java.io.OutputStream;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
+import okhttp3.Call;
+import okhttp3.Callback;
+import okhttp3.HttpUrl;
+import okhttp3.OkHttpClient;
+import okhttp3.Request;
+import okhttp3.Response;
+
 public class MainActivity extends AppCompatActivity {
     private static final int PICK_AUDIO_REQUEST = 1;
-//    public static final int VIEW_TYPE_EMPTY = 0;
+    // public static final int VIEW_TYPE_EMPTY = 0;
 
-    private enum PlayMode {LOOP, SHUFFLE, SINGLE}
+    private enum PlayMode {
+        LOOP, SHUFFLE, SINGLE
+    }
+
     private ImageView coverArtImageView; // Add reference for the ImageView
     private ExecutorService backgroundExecutor;
-    private static final SimpleDateFormat timeFormat =
-            new SimpleDateFormat("mm:ss", Locale.getDefault());
+    private static final SimpleDateFormat timeFormat = new SimpleDateFormat("mm:ss", Locale.getDefault());
     private PlayMode currentPlayMode = PlayMode.LOOP;
     private List<Integer> shuffleOrder = new ArrayList<>();
     private int shuffleIndex = 0;
@@ -109,18 +122,18 @@ public class MainActivity extends AppCompatActivity {
     private MaterialButton nextButton;
     private MediaPlayer mediaPlayer;
     private ActivityResultLauncher<Intent> filePickerLauncher;
-    //    private RecyclerView recyclerView;
+    // private RecyclerView recyclerView;
     private SongAdapter adapter;
     // private List<Song> songList;
     private SeekBar seekBar;
     private TextView progress = null;
-//    private Thread playerThread;
+    // private Thread playerThread;
     private boolean shouldAutoPlay = false;
     private volatile boolean isPreparing = false;
     private boolean isSeeking = false;
     private Handler handler = new Handler();
     private volatile boolean isPlaying = false;
-//    private Map<Integer, String> songMap = new HashMap<>();
+    // private Map<Integer, String> songMap = new HashMap<>();
     private SongAdapter songAdapter;
     private int currentPlayingIndex = -1;
     private Runnable updateProgressRunnable = new Runnable() {
@@ -138,9 +151,10 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        // 移除过渡动画相关代码
         setContentView(R.layout.activity_main);
 
-//        songList = new ArrayList<>();
+        // songList = new ArrayList<>();
 
         allPlaylists = new ArrayList<>();
         backgroundExecutor = Executors.newSingleThreadExecutor();
@@ -193,19 +207,22 @@ public class MainActivity extends AppCompatActivity {
         });
 
         // --- Setup Playlist Buttons ---
-        btnAddPlaylist.setOnClickListener(v -> showCreatePlaylistDialog());
-        Button btnLogout = findViewById(R.id.btnLogout);
-        btnLogout = findViewById(R.id.btnLogout);
-        btnLogout.setOnClickListener(v -> {
-            SharedPreferences.Editor editor = getSharedPreferences("user_info", MODE_PRIVATE).edit();
-            editor.putBoolean("isLogin", false);
-            editor.apply();
-
-            Intent intent = new Intent(MainActivity.this, LoginActivity.class);
-            intent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_NEW_TASK);
-            startActivity(intent);
-            finish();
+        btnAddPlaylist.setOnClickListener(v -> {
+            animateButton(v);
+            showCreatePlaylistDialog();
         });
+        // Button btnLogout = findViewById(R.id.btnLogout);
+        // btnLogout = findViewById(R.id.btnLogout);
+//        btnLogout.setOnClickListener(v -> {
+//            SharedPreferences.Editor editor = getSharedPreferences("user_info", MODE_PRIVATE).edit();
+//            editor.putBoolean("isLogin", false);
+//            editor.apply();
+//
+//            Intent intent = new Intent(MainActivity.this, LoginActivity.class);
+//            intent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_NEW_TASK);
+//            startActivity(intent);
+//            finish();
+//        });
         btnDeletePlaylist.setOnClickListener(v -> showDeletePlaylistConfirmation());
         mediaPlayer = new MediaPlayer();
         mediaPlayer.setAudioStreamType(AudioManager.STREAM_MUSIC);
@@ -225,7 +242,7 @@ public class MainActivity extends AppCompatActivity {
         songRecyclerView.setLayoutManager(new LinearLayoutManager(this));
         songRecyclerView.setAdapter(songAdapter);
         loadAllPlaylists(); // New loading method
-        //        注册文件选择器
+        // 注册文件选择器
         filePickerLauncher = registerForActivityResult(
                 new ActivityResultContracts.StartActivityForResult(), result -> {
                     if (result.getResultCode() == Activity.RESULT_OK && result.getData() != null) {
@@ -238,10 +255,9 @@ public class MainActivity extends AppCompatActivity {
                     }
                 });
 
-        //建立hash映射检索歌名
-        //        songMap.put(R.raw.test_audio, "顶上的风景");
-        //        Log.d("DEBUG", "songMap 初始化完毕: " + songMap.toString());
-
+        // 建立hash映射检索歌名
+        // songMap.put(R.raw.test_audio, "顶上的风景");
+        // Log.d("DEBUG", "songMap 初始化完毕: " + songMap.toString());
 
         ItemTouchHelper.Callback callback = new ItemTouchHelper.SimpleCallback(
                 ItemTouchHelper.UP | ItemTouchHelper.DOWN, // 允许上下拖动
@@ -292,13 +308,15 @@ public class MainActivity extends AppCompatActivity {
 
         ItemTouchHelper itemTouchHelper = new ItemTouchHelper(callback);
         itemTouchHelper.attachToRecyclerView(songRecyclerView);
-        //添加在线歌曲 新添加
-        findViewById(R.id.btn_add_online_music).setOnClickListener(v -> {
-            Intent intent = new Intent(MainActivity.this, AddOnlineMusicActivity.class);
-            startActivityForResult(intent, 2001); // 2001为自定义请求码
-        }); 
-        //启动按钮
+        // 添加在线歌曲 新添加
+        // findViewById(R.id.btn_add_online_music).setOnClickListener(v -> {
+        //     animateButton(v);
+        //     Intent intent = new Intent(MainActivity.this, AddOnlineMusicActivity.class);
+        //     startActivityForResult(intent, 2001); // 2001为自定义请求码
+        // });
+        // 启动按钮
         findViewById(R.id.btn_play).setOnClickListener(v -> {
+            animateButton(v);
             Playlist currentPlaylist = getCurrentPlaylist();
 
             if (currentPlaylist == null || currentPlaylist.getSongs().isEmpty()) {
@@ -312,7 +330,8 @@ public class MainActivity extends AppCompatActivity {
                 return;
             }
             shouldAutoPlay = true;
-            if (mediaPlayer != null && !isPlaying && mediaPlayer.getCurrentPosition() > 0 && currentPlayingIndex != -1) {
+            if (mediaPlayer != null && !isPlaying && mediaPlayer.getCurrentPosition() > 0
+                    && currentPlayingIndex != -1) {
                 Log.d("PlayButton", "Resuming paused playback at index: " + currentPlayingIndex);
                 try {
                     mediaPlayer.start();
@@ -321,7 +340,8 @@ public class MainActivity extends AppCompatActivity {
                     tvStatus.setText("正在播放");
                     handler.post(updateProgressRunnable);
                     // Ensure highlight is correct
-                    if(songAdapter != null) songAdapter.setPlayingPosition(currentPlayingIndex);
+                    if (songAdapter != null)
+                        songAdapter.setPlayingPosition(currentPlayingIndex);
                 } catch (IllegalStateException e) {
                     Log.e("PlayButton", "Error resuming playback", e);
                     // Might need to reset and play from beginning or stop
@@ -348,13 +368,15 @@ public class MainActivity extends AppCompatActivity {
                 // Optional: maybe pause here? Current logic assumes Play=Start/Resume
             } else {
                 // Should ideally not reach here if states are managed well, maybe play current?
-                Log.w("PlayButton", "Unexpected state. CurrentIndex: " + currentPlayingIndex + ", stoppedAtIndex: " + stoppedAtIndex + ". Attempting to play current index.");
+                Log.w("PlayButton", "Unexpected state. CurrentIndex: " + currentPlayingIndex + ", stoppedAtIndex: "
+                        + stoppedAtIndex + ". Attempting to play current index.");
                 stoppedAtIndex = -1;
             }
         });
 
-                //暂停按钮
+        // 暂停按钮
         findViewById(R.id.btn_pause).setOnClickListener(v -> {
+            animateButton(v);
             // ... (Keep existing pause logic, it should work fine) ...
             shouldAutoPlay = false;
             synchronized (this) {
@@ -367,22 +389,37 @@ public class MainActivity extends AppCompatActivity {
                 }
             }
         });
-        //终止按钮
-        findViewById(R.id.btn_stop).setOnClickListener(v -> stopPlayback());
-        //添加歌曲
-        findViewById(R.id.btn_add_song).setOnClickListener((v -> addSong()));
-        //删除歌曲
-        findViewById(R.id.btn_delete_song).setOnClickListener(v -> removeSelectedSong());
-        //上一首
-        prevButton.setOnClickListener(v -> playPrevious());
-        nextButton.setOnClickListener(v -> playNext());
-        //进度条
+        // 终止按钮
+        findViewById(R.id.btn_stop).setOnClickListener(v -> {
+            animateButton(v);
+            stopPlayback();
+        });
+        // 添加歌曲
+        findViewById(R.id.btn_add_song).setOnClickListener((v -> {
+            animateButton(v);
+            addSong();
+        }));
+        // 删除歌曲
+        findViewById(R.id.btn_delete_song).setOnClickListener(v -> {
+            animateButton(v);
+            removeSelectedSong();
+        });
+        // 上一首
+        prevButton.setOnClickListener(v -> {
+            animateButton(v);
+            playPrevious();
+        });
+        nextButton.setOnClickListener(v -> {
+            animateButton(v);
+            playNext();
+        });
+        // 进度条
         seekBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
             @Override
             public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
                 if (fromUser && mediaPlayer != null) {
                     mediaPlayer.seekTo(progress);
-                    //                    updatePlayProgress();
+                    // updatePlayProgress();
                     updateProgressText(progress, mediaPlayer.getDuration());
                 }
 
@@ -405,16 +442,63 @@ public class MainActivity extends AppCompatActivity {
 
             }
         });
-        //menu button
-        findViewById(R.id.btn_switch_mode).setOnClickListener(v -> switchPlayMode());
+        // menu button
+        findViewById(R.id.btn_switch_mode).setOnClickListener(v -> {
+            animateButton(v);
+            switchPlayMode();
+        });
         setDefaultCoverArt();
     }
-    
+
+    private void notifyPlayOnlineSong(String songid) {
+        OkHttpClient client = new OkHttpClient();
+        HttpUrl url = HttpUrl.parse("http://192.168.183.1:8888/houduan/play")
+                .newBuilder()
+                .addQueryParameter("songid", songid)
+                .build();
+        Request request = new Request.Builder().url(url).get().build();
+        client.newCall(request).enqueue(new Callback() {
+            @Override
+            public void onFailure(Call call, IOException e) {
+            }
+
+            @Override
+            public void onResponse(Call call, Response response) throws IOException {
+            }
+        });
+    }
+
     private Playlist getCurrentPlaylist() {
         if (allPlaylists != null && currentPlaylistIndex >= 0 && currentPlaylistIndex < allPlaylists.size()) {
             return allPlaylists.get(currentPlaylistIndex);
         }
         return null; // Or return a default empty playlist if preferred
+    }
+
+    @Override
+    public boolean onCreateOptionsMenu(Menu menu) {
+        getMenuInflater().inflate(R.menu.main_menu, menu);
+        return true;
+    }
+
+    @Override
+    public boolean onOptionsItemSelected(MenuItem item) {
+        int id = item.getItemId();
+        if (id == R.id.action_add_online_music) {
+            Intent intent = new Intent(MainActivity.this, AddOnlineMusicActivity.class);
+            startActivityForResult(intent, 2001);
+            return true;
+        } else if (id == R.id.btnLogout) {
+            SharedPreferences.Editor editor = getSharedPreferences("user_info", MODE_PRIVATE).edit();
+            editor.putBoolean("isLogin", false);
+            editor.apply();
+            Intent intent = new Intent(MainActivity.this, LoginActivity.class);
+            intent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_NEW_TASK);
+            startActivity(intent);
+            finish();
+            return true;
+        }
+        return super.onOptionsItemSelected(item);
     }
     private void copyUriToTempFile(Uri uri, File tempFile) throws IOException {
         InputStream inputStream = null;
@@ -445,6 +529,7 @@ public class MainActivity extends AppCompatActivity {
             }
         }
     }
+
     private List<Song> getCurrentSongs() {
         Playlist current = getCurrentPlaylist();
         return (current != null) ? current.getSongs() : new ArrayList<>(); // Return empty list if no playlist
@@ -467,7 +552,9 @@ public class MainActivity extends AppCompatActivity {
         if (allPlaylists == null || newPlaylistIndex < 0 || newPlaylistIndex >= allPlaylists.size()) {
             Log.e("PlaylistSwitch", "Validation failed: Invalid index or allPlaylists is null.");
             // Ensure spinner selection reflects reality if index was invalid
-            if (playlistSpinner != null && currentPlaylistIndex >= 0 && currentPlaylistIndex < playlistSpinner.getCount() && playlistSpinner.getSelectedItemPosition() != currentPlaylistIndex) {
+            if (playlistSpinner != null && currentPlaylistIndex >= 0
+                    && currentPlaylistIndex < playlistSpinner.getCount()
+                    && playlistSpinner.getSelectedItemPosition() != currentPlaylistIndex) {
                 Log.w("PlaylistSwitch", "Resetting spinner selection to current index: " + currentPlaylistIndex);
                 playlistSpinner.setSelection(currentPlaylistIndex);
             }
@@ -478,10 +565,10 @@ public class MainActivity extends AppCompatActivity {
         if (newPlaylistIndex == currentPlaylistIndex) {
             Log.d("PlaylistSwitch", "Validation passed but index is same as current. No switch needed.");
             // Optional: Refresh view anyway? Or just exit?
-            // refreshCurrentPlaylistView(); // Uncomment if you want refresh even on same selection
+            // refreshCurrentPlaylistView(); // Uncomment if you want refresh even on same
+            // selection
             return;
         }
-
 
         Log.d("PlaylistSwitch", "Proceeding with switch logic...");
 
@@ -500,7 +587,8 @@ public class MainActivity extends AppCompatActivity {
         // currentPlayingIndex was reset by stopPlayback()
         // Optionally load last played index for this playlist if implemented
         // Playlist newPlaylist = getCurrentPlaylist();
-        // if (newPlaylist != null) { currentPlayingIndex = newPlaylist.getLastPlayingIndex(); }
+        // if (newPlaylist != null) { currentPlayingIndex =
+        // newPlaylist.getLastPlayingIndex(); }
 
         // Clear current song display (or update if restoring state)
         TextView currentSongTextView = findViewById(R.id.tv_current_song_name);
@@ -511,12 +599,15 @@ public class MainActivity extends AppCompatActivity {
         seekBar.setProgress(0);
         seekBar.setMax(100);
 
-        // Update the spinner selection visually (ensure it doesn't trigger listener again infinitely)
+        // Update the spinner selection visually (ensure it doesn't trigger listener
+        // again infinitely)
         // The listener check should prevent infinite loop, but be cautious
         if (playlistSpinner != null && playlistSpinner.getSelectedItemPosition() != currentPlaylistIndex) {
             Log.d("PlaylistSwitch", "Setting spinner selection visually to: " + currentPlaylistIndex);
-            // Set selection without triggering listener if possible, though standard setSelection usually triggers it once.
-            // The check inside the listener (position != currentPlaylistIndex) is the primary guard.
+            // Set selection without triggering listener if possible, though standard
+            // setSelection usually triggers it once.
+            // The check inside the listener (position != currentPlaylistIndex) is the
+            // primary guard.
             playlistSpinner.setSelection(currentPlaylistIndex);
         }
 
@@ -537,6 +628,7 @@ public class MainActivity extends AppCompatActivity {
      * Shows a dialog to enter the name for a new playlist.
      */
     private void showCreatePlaylistDialog() {
+        // animateButton(v);
         AlertDialog.Builder builder = new AlertDialog.Builder(this);
         builder.setTitle("创建新歌单");
 
@@ -617,13 +709,15 @@ public class MainActivity extends AppCompatActivity {
             return;
         }
 
-        Log.d("DeletePlaylist", "Showing confirmation for playlist: " + playlistToDelete.getName() + " at index " + currentPlaylistIndex);
+        Log.d("DeletePlaylist", "Showing confirmation for playlist: " + playlistToDelete.getName() + " at index "
+                + currentPlaylistIndex);
 
         new AlertDialog.Builder(this)
                 .setTitle("删除歌单")
                 .setMessage("确定要删除歌单 '" + playlistToDelete.getName() + "' 吗？")
                 .setPositiveButton("删除", (dialog, which) -> {
-                    Log.d("DeletePlaylist", "Delete confirmed by user. Calling deletePlaylist with index: " + currentPlaylistIndex);
+                    Log.d("DeletePlaylist",
+                            "Delete confirmed by user. Calling deletePlaylist with index: " + currentPlaylistIndex);
                     // Pass the index that was current when dialog was shown
                     deletePlaylist(currentPlaylistIndex);
                 })
@@ -637,12 +731,13 @@ public class MainActivity extends AppCompatActivity {
     private void deletePlaylist(int indexToDelete) {
         Log.d("DeletePlaylist", "--- Entering deletePlaylist ---");
         Log.d("DeletePlaylist", "Attempting to delete index: " + indexToDelete);
-        Log.d("DeletePlaylist", "Total playlists BEFORE delete: " + (allPlaylists != null ? allPlaylists.size() : "null"));
+        Log.d("DeletePlaylist",
+                "Total playlists BEFORE delete: " + (allPlaylists != null ? allPlaylists.size() : "null"));
         Log.d("DeletePlaylist", "Current active index BEFORE delete: " + currentPlaylistIndex);
 
-
         // --- Validation ---
-        if (allPlaylists == null || indexToDelete < 0 || indexToDelete >= allPlaylists.size() || allPlaylists.size() <= 1) {
+        if (allPlaylists == null || indexToDelete < 0 || indexToDelete >= allPlaylists.size()
+                || allPlaylists.size() <= 1) {
             Log.e("DeletePlaylist", "Validation failed: Invalid index or cannot delete last playlist.");
             // Optionally show toast again here
             return;
@@ -661,19 +756,19 @@ public class MainActivity extends AppCompatActivity {
         allPlaylists.remove(indexToDelete);
         Log.d("DeletePlaylist", "Removed playlist from allPlaylists. New size: " + allPlaylists.size());
 
-
         // --- Step 2: Update the Spinner Adapter ---
         if (playlistSpinnerAdapter != null) {
-            // Remove by object or name if possible, otherwise requires recreating the adapter's list
+            // Remove by object or name if possible, otherwise requires recreating the
+            // adapter's list
             // Removing by name is safer if object instances might differ
             playlistSpinnerAdapter.remove(deletedPlaylist.getName());
             // Let the adapter know its underlying data count changed
             playlistSpinnerAdapter.notifyDataSetChanged();
-            Log.d("DeletePlaylist", "Removed '" + deletedPlaylist.getName() + "' from spinner adapter. Adapter count: " + playlistSpinnerAdapter.getCount());
+            Log.d("DeletePlaylist", "Removed '" + deletedPlaylist.getName() + "' from spinner adapter. Adapter count: "
+                    + playlistSpinnerAdapter.getCount());
         } else {
             Log.e("DeletePlaylist", "playlistSpinnerAdapter is null! Cannot update spinner.");
         }
-
 
         // --- Step 3: Determine and set the new active playlist index ---
         int newActiveIndex;
@@ -696,7 +791,6 @@ public class MainActivity extends AppCompatActivity {
             // Set the new current index BEFORE calling switchPlaylist or setting spinner
             currentPlaylistIndex = newActiveIndex;
         }
-
 
         // --- Step 4: Update UI (Spinner Selection and Song List) ---
         if (currentPlaylistIndex != -1) { // Only if there's a valid playlist left
@@ -863,7 +957,6 @@ public class MainActivity extends AppCompatActivity {
                         return true; // Indicate error was handled
                     });
 
-
                 });
 
                 // Update last played index for the playlist (do this when starting playback)
@@ -881,6 +974,7 @@ public class MainActivity extends AppCompatActivity {
             }
         }
     }
+
     private void scrollToPlayingItem(final int position) {
         // Ensure position is valid
         if (position < 0) {
@@ -891,8 +985,10 @@ public class MainActivity extends AppCompatActivity {
         final RecyclerView songRecyclerView = findViewById(R.id.song_recycler_view); // Make final for use in post()
         final RecyclerView.LayoutManager layoutManager = songRecyclerView.getLayoutManager(); // Make final
 
-        if (songRecyclerView != null && layoutManager instanceof LinearLayoutManager) { // Check if it's LinearLayoutManager
-            // Use post to ensure scrolling happens after layout calculations might have settled
+        if (songRecyclerView != null && layoutManager instanceof LinearLayoutManager) { // Check if it's
+                                                                                        // LinearLayoutManager
+            // Use post to ensure scrolling happens after layout calculations might have
+            // settled
             songRecyclerView.post(() -> {
                 Log.d("Scroll", "Attempting to smooth scroll to position: " + position);
 
@@ -909,14 +1005,14 @@ public class MainActivity extends AppCompatActivity {
                     // Increase the value returned for slower scrolling, decrease for faster.
                     // The default value is 25f / displayMetrics.densityDpi.
                     /*
-                    @Override
-                    protected float calculateSpeedPerPixel(DisplayMetrics displayMetrics) {
-                        // Example: Make scroll take roughly 100ms per inch
-                        // return 100f / displayMetrics.densityDpi;
-                        // Or make it slightly slower than default:
-                        return super.calculateSpeedPerPixel(displayMetrics) * 1.5f; // 50% slower
-                    }
-                    */
+                     * @Override
+                     * protected float calculateSpeedPerPixel(DisplayMetrics displayMetrics) {
+                     * // Example: Make scroll take roughly 100ms per inch
+                     * // return 100f / displayMetrics.densityDpi;
+                     * // Or make it slightly slower than default:
+                     * return super.calculateSpeedPerPixel(displayMetrics) * 1.5f; // 50% slower
+                     * }
+                     */
                 };
 
                 // Set the target position for the scroller
@@ -930,9 +1026,11 @@ public class MainActivity extends AppCompatActivity {
             Log.e("Scroll", "Cannot scroll: RecyclerView, LayoutManager is null, or not a LinearLayoutManager.");
         }
     } // End of scrollToPlayingItem
+
     /**
      * Helper method to enable or disable the Previous and Next buttons.
      * Ensures this runs on the UI thread.
+     * 
      * @param enabled true to enable, false to disable.
      */
     private void setNavigationButtonsEnabled(final boolean enabled) {
@@ -950,6 +1048,7 @@ public class MainActivity extends AppCompatActivity {
             Log.d("UIUpdate", "Navigation buttons enabled: " + enabled);
         });
     }
+
     private void prepareMediaPlayer(int position) {
         Playlist currentPlaylist = getCurrentPlaylist();
         if (currentPlaylist == null || position < 0 || position >= currentPlaylist.getSongCount())
@@ -1031,8 +1130,9 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    //delete the song we chosen
+    // delete the song we chosen
     private void removeSelectedSong() {
+
         Playlist currentPlaylist = getCurrentPlaylist();
         if (currentPlaylist != null && currentPlayingIndex >= 0
                 && currentPlayingIndex < currentPlaylist.getSongCount()) {
@@ -1055,7 +1155,8 @@ public class MainActivity extends AppCompatActivity {
 
         synchronized (this) {
             Song removedSong = currentPlaylist.getSongs().get(position);
-            Log.d("RemoveSong", "Removing song: " + removedSong.getName() + " at index " + position + " from playlist " + currentPlaylist.getName());
+            Log.d("RemoveSong", "Removing song: " + removedSong.getName() + " at index " + position + " from playlist "
+                    + currentPlaylist.getName());
             Log.d("RemoveSong", "Playlist size BEFORE remove: " + currentPlaylist.getSongCount());
 
             boolean isCurrentPlayingSong = (position == currentPlayingIndex);
@@ -1070,7 +1171,6 @@ public class MainActivity extends AppCompatActivity {
             currentPlaylist.removeSong(position);
             Log.d("RemoveSong", "Playlist size AFTER remove: " + currentPlaylist.getSongCount());
 
-
             // --- Step 2: Update the Adapter's internal list to match ---
             // This is the crucial step that was missing or incorrect before.
             if (songAdapter != null) {
@@ -1084,22 +1184,27 @@ public class MainActivity extends AppCompatActivity {
             }
 
             // --- Step 3: Adjust the playing index if needed ---
-            // (This needs to happen AFTER the list is modified but BEFORE saving state potentially)
+            // (This needs to happen AFTER the list is modified but BEFORE saving state
+            // potentially)
             if (isCurrentPlayingSong) {
                 // stopPlayback already set currentPlayingIndex = -1
                 Log.d("RemoveSong", "Current playing index remains -1 after stop.");
             } else if (position < currentPlayingIndex) {
                 currentPlayingIndex--;
                 Log.d("RemoveSong", "Adjusted current playing index to: " + currentPlayingIndex);
-                // Optional: If you want the highlight to immediately reflect the new index after deletion
-                // This might be needed if updateSongList doesn't handle restoring highlight correctly
+                // Optional: If you want the highlight to immediately reflect the new index
+                // after deletion
+                // This might be needed if updateSongList doesn't handle restoring highlight
+                // correctly
                 if (songAdapter != null && currentPlayingIndex != -1) {
-                    // We need to ensure this doesn't conflict with updateSongList clearing highlight
-                    // Maybe call setPlayingPosition *after* updateSongList? Or handle in updateSongList?
-                    // For now, let's rely on updateSongList clearing and subsequent play action to highlight.
+                    // We need to ensure this doesn't conflict with updateSongList clearing
+                    // highlight
+                    // Maybe call setPlayingPosition *after* updateSongList? Or handle in
+                    // updateSongList?
+                    // For now, let's rely on updateSongList clearing and subsequent play action to
+                    // highlight.
                 }
             }
-
 
             // --- Step 4: Save the updated playlists ---
             saveAllPlaylists();
@@ -1112,6 +1217,7 @@ public class MainActivity extends AppCompatActivity {
 
     // --- Location: MainActivity.java ---
     private void playPrevious() {
+        // animateButton(v);
         // --- Disable immediately for better responsiveness ---
         setNavigationButtonsEnabled(false); // Keep this
 
@@ -1132,13 +1238,15 @@ public class MainActivity extends AppCompatActivity {
             prevPosition = currentPlayingIndex; // Target the current index
             // Ensure currentPlayingIndex is valid, otherwise fallback
             if (prevPosition < 0 || prevPosition >= songCount) {
-                Log.w("PlayPrevious", "Single mode: currentPlayingIndex is invalid ("+ currentPlayingIndex +"). Falling back to 0.");
+                Log.w("PlayPrevious", "Single mode: currentPlayingIndex is invalid (" + currentPlayingIndex
+                        + "). Falling back to 0.");
                 prevPosition = 0; // Fallback to first song if index is somehow invalid
             }
 
         } else if (currentPlayMode == PlayMode.SHUFFLE) {
             // Handle Shuffle mode (existing logic)
-            if (shuffleOrder.isEmpty() || shuffleOrder.size() != songCount) generateShuffleOrder();
+            if (shuffleOrder.isEmpty() || shuffleOrder.size() != songCount)
+                generateShuffleOrder();
             if (!shuffleOrder.isEmpty()) { // Check if shuffle order exists
                 // Go back in shuffle order, handle wrap around carefully
                 shuffleIndex = (shuffleIndex - 1);
@@ -1146,7 +1254,8 @@ public class MainActivity extends AppCompatActivity {
                     shuffleIndex = shuffleOrder.size() - 1; // Wrap to end
                 }
                 prevPosition = shuffleOrder.get(shuffleIndex);
-                Log.d("PlayPrevious", "Shuffle mode: Calculated previous index " + prevPosition + " from shuffle order (shuffleIndex=" + shuffleIndex + ")");
+                Log.d("PlayPrevious", "Shuffle mode: Calculated previous index " + prevPosition
+                        + " from shuffle order (shuffleIndex=" + shuffleIndex + ")");
             } else {
                 Log.e("PlayPrevious", "Shuffle mode: Shuffle order is empty. Falling back to 0.");
                 prevPosition = 0; // Fallback if shuffle order is empty
@@ -1162,13 +1271,13 @@ public class MainActivity extends AppCompatActivity {
             Log.d("PlayPrevious", "Loop mode: Calculated previous index " + prevPosition);
         }
 
-
         // --- Final Validation and Play ---
         if (prevPosition >= 0 && prevPosition < songCount) {
             Log.d("PlayPrevious", "Final target index: " + prevPosition + ". Calling playSong.");
             playSong(prevPosition); // playSong will handle re-enabling buttons
         } else {
-            Log.e("PlayPrevious", "Failed to determine a valid previous position. Final calculated index: " + prevPosition);
+            Log.e("PlayPrevious",
+                    "Failed to determine a valid previous position. Final calculated index: " + prevPosition);
             // Re-enable buttons if we don't proceed to playSong
             setNavigationButtonsEnabled(true);
             // Optionally play the first song as a fallback if calculation fails
@@ -1178,7 +1287,9 @@ public class MainActivity extends AppCompatActivity {
             }
         }
     }
+
     private void playNext() {
+        // animateButton(v);
         setNavigationButtonsEnabled(false);
         Playlist currentPlaylist = getCurrentPlaylist();
         if (currentPlaylist == null || currentPlaylist.getSongs().isEmpty()) {
@@ -1260,8 +1371,6 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-  
-   
     private void saveAllPlaylists() {
         if (allPlaylists == null) {
             Log.e("SavePlaylist", "allPlaylists is null, cannot save.");
@@ -1541,7 +1650,7 @@ public class MainActivity extends AppCompatActivity {
 
         editor.apply();
     }
-    
+
     private void switchPlayMode() {
         Playlist currentPlaylist = getCurrentPlaylist();
         int songCount = (currentPlaylist != null) ? currentPlaylist.getSongCount() : 0;
@@ -1581,7 +1690,8 @@ public class MainActivity extends AppCompatActivity {
         TextView tv_playMode = findViewById(R.id.tv_play_mode);
         tv_playMode.setText("播放模式: " + modeText);
     }
-    //转地址编码
+
+    // 转地址编码
     private void generateShuffleOrder() {
         shuffleOrder = new ArrayList<>();
         List<Song> currentSongs = getCurrentSongs(); // Get songs from active playlist
@@ -1599,6 +1709,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void addSong() {
+        // animateButton(v);
         Playlist currentPlaylist = getCurrentPlaylist();
         if (currentPlaylist == null) {
             Toast.makeText(this, "请先创建或选择一个歌单", Toast.LENGTH_SHORT).show();
@@ -1613,10 +1724,12 @@ public class MainActivity extends AppCompatActivity {
         startActivityForResult(intent, PICK_AUDIO_REQUEST); // Use the constant
         // saveAllPlaylists(); // Save is called in onActivityResult *after* adding
     }
+
     private void refreshCurrentPlaylistView() {
         Playlist currentPlaylist = getCurrentPlaylist();
         if (songAdapter != null) {
-            Log.d("AdapterRefresh", "Refreshing adapter view for playlist: " + (currentPlaylist != null ? currentPlaylist.getName() : "null"));
+            Log.d("AdapterRefresh", "Refreshing adapter view for playlist: "
+                    + (currentPlaylist != null ? currentPlaylist.getName() : "null"));
             // Use the adapter's method to update its internal list and notify
             songAdapter.updateSongList(currentPlaylist != null ? currentPlaylist.getSongs() : new ArrayList<>());
         } else {
@@ -1667,8 +1780,10 @@ public class MainActivity extends AppCompatActivity {
                 Toast.makeText(this, "已添加 " + addedCount + " 首歌曲到 '" + playlistBeingAddedTo.getName() + "'",
                         Toast.LENGTH_SHORT).show();
 
-                // --- Refresh the adapter view IF the changes were made to the currently active playlist ---
-                if (playlistBeingAddedTo == getCurrentPlaylist()) { // Check if the target playlist is still the active one
+                // --- Refresh the adapter view IF the changes were made to the currently active
+                // playlist ---
+                if (playlistBeingAddedTo == getCurrentPlaylist()) { // Check if the target playlist is still the active
+                                                                    // one
                     Log.d("ActivityResult", "Refreshing adapter view after adding songs.");
                     refreshCurrentPlaylistView(); // Call the helper method
                 } else {
@@ -1717,13 +1832,15 @@ public class MainActivity extends AppCompatActivity {
     // --- Modify addSongToList to ONLY update the data model ---
     // --- Remove the notifyDataSetChanged() call from here ---
     private boolean addSongToList(Uri uri, Playlist targetPlaylist) {
-        if (uri == null || targetPlaylist == null) return false;
+        if (uri == null || targetPlaylist == null)
+            return false;
 
         // Check for duplicates
         String newFilePath = uri.toString();
         for (Song existingSong : targetPlaylist.getSongs()) {
             if (existingSong.getFilePath().equals(newFilePath)) {
-                Toast.makeText(this, getFileName(uri) + " 已存在于歌单 '" + targetPlaylist.getName() + "'", Toast.LENGTH_SHORT).show();
+                Toast.makeText(this, getFileName(uri) + " 已存在于歌单 '" + targetPlaylist.getName() + "'",
+                        Toast.LENGTH_SHORT).show();
                 return false;
             }
         }
@@ -1732,8 +1849,7 @@ public class MainActivity extends AppCompatActivity {
             // Get permission
             getContentResolver().takePersistableUriPermission(
                     uri,
-                    Intent.FLAG_GRANT_READ_URI_PERMISSION
-            );
+                    Intent.FLAG_GRANT_READ_URI_PERMISSION);
 
             // Get info and create Song
             String fileName = getFileName(uri);
@@ -1747,14 +1863,15 @@ public class MainActivity extends AppCompatActivity {
             // --- DO NOT NOTIFY ADAPTER HERE ---
             // Notification will happen in onActivityResult after all songs are processed.
             /*
-            if (targetPlaylist == getCurrentPlaylist()) {
-                 // songAdapter.notifyItemInserted(targetPlaylist.getSongCount() - 1);
-                  songAdapter.notifyDataSetChanged(); // REMOVE THIS LINE
-                 Log.d("AddSongToList", "Added '" + fileName + "' to current adapter view.");
-            } else {
-                 Log.d("AddSongToList", "Added '" + fileName + "' to inactive playlist '" + targetPlaylist.getName() + "'. Adapter not updated immediately.");
-            }
-            */
+             * if (targetPlaylist == getCurrentPlaylist()) {
+             * // songAdapter.notifyItemInserted(targetPlaylist.getSongCount() - 1);
+             * songAdapter.notifyDataSetChanged(); // REMOVE THIS LINE
+             * Log.d("AddSongToList", "Added '" + fileName + "' to current adapter view.");
+             * } else {
+             * Log.d("AddSongToList", "Added '" + fileName + "' to inactive playlist '" +
+             * targetPlaylist.getName() + "'. Adapter not updated immediately.");
+             * }
+             */
             return true; // Indicate success
 
         } catch (SecurityException e) {
@@ -1767,6 +1884,7 @@ public class MainActivity extends AppCompatActivity {
             return false;
         }
     }
+
     private void handleSelectedAudio(Uri audioUri) {
         Log.w("HandleSelectedAudio", "This method might be redundant. Called for URI: " + audioUri);
         Playlist currentPlaylist = getCurrentPlaylist();
@@ -1788,7 +1906,7 @@ public class MainActivity extends AppCompatActivity {
         // Update adapter
         // saveAllPlaylists(); // Save changes
     }
-    
+
     private String getFileName(Uri uri) {
         String displayName = "";
         try (Cursor cursor = getContentResolver().query(
@@ -1800,7 +1918,7 @@ public class MainActivity extends AppCompatActivity {
         }
         return displayName;
     }
-   
+
     private void stopPlayback() {
         synchronized (this) {
             Log.d("Playback", "Stopping playback.");
@@ -1830,7 +1948,7 @@ public class MainActivity extends AppCompatActivity {
                     mediaPlayer.release();
                     mediaPlayer = null;
                 }
-              
+
             }
 
             // Reset playback state variables
@@ -1855,8 +1973,9 @@ public class MainActivity extends AppCompatActivity {
 
         }
     }
+
     // 从 MP3 文件中提取封面图片并显示在 ImageView 上
-// 从 MP3 文件中提取封面图片并显示在 ImageView 上
+    // 从 MP3 文件中提取封面图片并显示在 ImageView 上
     private void setDefaultCoverArt() {
         runOnUiThread(() -> {
             if (coverArtImageView != null) {
@@ -1870,27 +1989,30 @@ public class MainActivity extends AppCompatActivity {
      * Extracts cover art from the Song's file using Jaudiotagger (in background)
      * and updates the ImageView on the UI thread.
      * Handles SAF URIs by copying to a temporary file.
+     * 
      * @param song The song whose cover art needs to be extracted.
      */
 
-// 添加封面提取和显示方法
+    // 添加封面提取和显示方法
     private void extractAndDisplayCoverArt(Song song) {
         try {
             Uri songUri = Uri.parse(song.getFilePath());
             File tempFile = File.createTempFile("temp_audio", ".mp3", getCacheDir());
-            copyUriToTempFile(songUri, tempFile);  // 使用已有方法复制文件
+            copyUriToTempFile(songUri, tempFile); // 使用已有方法复制文件
 
             AudioFile audioFile = AudioFileIO.read(tempFile);
             Tag tag = audioFile.getTag();
             if (tag != null) {
                 Artwork artwork = tag.getFirstArtwork();
                 if (artwork != null) {
-                    final Bitmap coverBitmap = BitmapFactory.decodeByteArray(artwork.getBinaryData(), 0, artwork.getBinaryData().length);
+                    final Bitmap coverBitmap = BitmapFactory.decodeByteArray(artwork.getBinaryData(), 0,
+                            artwork.getBinaryData().length);
                     runOnUiThread(() -> coverArtImageView.setImageBitmap(coverBitmap));
                     return;
                 }
             }
-        } catch (CannotReadException | IOException | TagException | ReadOnlyFileException | InvalidAudioFrameException e) {
+        } catch (CannotReadException | IOException | TagException | ReadOnlyFileException
+                | InvalidAudioFrameException e) {
             Log.e("CoverArt", "读取封面失败", e);
         }
 
@@ -1914,8 +2036,10 @@ public class MainActivity extends AppCompatActivity {
                 return false;
         }
     }
+
     /**
      * Gets the display name of a file from a content URI.
+     * 
      * @param uri The content URI.
      * @return The display name, or null if not found.
      */
@@ -1942,7 +2066,8 @@ public class MainActivity extends AppCompatActivity {
         // Fallback if not a content URI or query failed - try using path segments
         if (fileName == null && uri != null) {
             fileName = uri.getLastPathSegment();
-            // Basic sanitization if needed (e.g., remove query params, though less likely for file URIs)
+            // Basic sanitization if needed (e.g., remove query params, though less likely
+            // for file URIs)
         }
         return fileName;
     }
@@ -1950,6 +2075,7 @@ public class MainActivity extends AppCompatActivity {
 
     @Override
     protected void onPause() {
+        // animateButton(v);
         super.onPause();
         // Save state when the activity is paused (e.g., user switches apps)
         if (mediaPlayer != null) { // Check if player exists
@@ -1959,13 +2085,16 @@ public class MainActivity extends AppCompatActivity {
 
     @Override
     protected void onStop() {
+        // animateButton(v);
         super.onStop();
         // Consider if you want to save state here too. onPause is usually sufficient.
         // savePlaybackState();
     }
+
     private void updateProgressText(int current, int duration) {
         progress.setText("播放进度: " + timeFormat.format(current) + " / " + timeFormat.format(duration));
     }
+
     @Override
     protected void onDestroy() {
         super.onDestroy();
@@ -1990,5 +2119,9 @@ public class MainActivity extends AppCompatActivity {
         // Remove handler callbacks
         handler.removeCallbacks(updateProgressRunnable);
     }
-}
 
+    private void animateButton(View v) {
+        v.animate().scaleX(0.92f).scaleY(0.92f).setDuration(75)
+                .withEndAction(() -> v.animate().scaleX(1f).scaleY(1f).setDuration(75).start()).start();
+    }
+}

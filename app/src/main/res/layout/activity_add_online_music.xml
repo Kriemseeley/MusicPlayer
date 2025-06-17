@@ -1,39 +1,121 @@
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    android:orientation="vertical"
-    android:padding="24dp"
+<androidx.coordinatorlayout.widget.CoordinatorLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
-    android:layout_height="match_parent">
+    android:layout_height="match_parent"
+    android:background="#FFFFFF">
 
-    <EditText
-        android:id="@+id/et_keyword"
-        android:hint="输入歌曲名或歌手"
+    <!-- 内容区域 -->
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:id="@+id/content_area"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"/>
+        android:layout_height="match_parent"
+        android:layout_marginBottom="56dp"
+        android:padding="24dp">
 
-    <Button
-        android:id="@+id/btn_search"
-        android:text="搜索"
+        <!-- 页面标题 -->
+        <com.google.android.material.textview.MaterialTextView
+            android:id="@+id/tv_title"
+            android:text="音乐搜索"
+            android:textSize="24sp"
+            android:textStyle="bold"
+            android:textColor="#212121"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintStart_toStartOf="parent"/>
+
+        <!-- 搜索区域 -->
+        <com.google.android.material.card.MaterialCardView
+            android:id="@+id/card_search"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            app:cardBackgroundColor="#FFFFFF"
+            app:cardCornerRadius="24dp"
+            app:cardElevation="4dp"
+            app:layout_constraintTop_toBottomOf="@id/tv_title"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toEndOf="parent">
+
+            <androidx.constraintlayout.widget.ConstraintLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:padding="8dp">
+
+                <ImageView
+                    android:id="@+id/iv_search"
+                    android:src="@drawable/ic_search"
+                    android:layout_width="24dp"
+                    android:layout_height="24dp"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintTop_toTopOf="parent"
+                    app:layout_constraintBottom_toBottomOf="parent"
+                    android:layout_marginLeft="12dp"/>
+
+                <com.google.android.material.textfield.TextInputLayout
+                    android:id="@+id/til_keyword"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    app:layout_constraintStart_toEndOf="@id/iv_search"
+                    app:layout_constraintTop_toTopOf="parent"
+                    app:layout_constraintBottom_toBottomOf="parent"
+                    app:layout_constraintEnd_toStartOf="@id/btn_search">
+                    <com.google.android.material.textfield.TextInputEditText
+                        android:id="@+id/et_keyword"
+                        android:hint="输入歌曲名、歌手"
+                        android:background="@android:color/transparent"
+                        android:padding="12dp"
+                        android:textSize="16sp"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"/>
+                </com.google.android.material.textfield.TextInputLayout>
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btn_search"
+                    android:text="搜索"
+                    style="@style/Widget.MaterialComponents.Button.TextButton"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    app:cornerRadius="16dp"
+                    app:icon="@drawable/ic_search"
+                    app:iconPadding="4dp"
+                    app:iconGravity="textStart"
+                    app:layout_constraintEnd_toEndOf="parent"
+                    app:layout_constraintTop_toTopOf="parent"
+                    app:layout_constraintBottom_toBottomOf="parent"/>
+            </androidx.constraintlayout.widget.ConstraintLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+        <!-- 搜索结果列表 -->
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/rv_online_songs"
+            android:layout_width="0dp"
+            android:layout_height="0dp"
+            android:clipToPadding="false"
+            android:paddingBottom="16dp"
+            app:layout_constraintTop_toBottomOf="@id/card_search"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"/>
+    </androidx.constraintlayout.widget.ConstraintLayout>
+
+    <!-- 底部操作栏 -->
+    <com.google.android.material.bottomappbar.BottomAppBar
+        android:id="@+id/bottom_app_bar"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="12dp"/>
-    <TextView
-        android:id="@+id/tv_result"
-        android:text="搜索结果将在这里显示"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="24dp"/>
-    <androidx.recyclerview.widget.RecyclerView
-        android:id="@+id/rv_online_songs"
-        android:layout_width="match_parent"
-        android:layout_height="0dp"
-        android:layout_weight="1"
-        android:layout_marginTop="16dp"/>
+        android:layout_gravity="bottom"
+        app:backgroundTint="#FFFFFF"
+        app:fabAlignmentMode="end">
 
-    <Button
-        android:id="@+id/btn_add_online_song"
-        android:text="添加到歌单"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="12dp"
-        android:enabled="false"/>
-</LinearLayout>
+        <com.google.android.material.floatingactionbutton.FloatingActionButton
+            android:id="@+id/btn_add_online_song"
+            android:src="@drawable/ic_add_song"
+            android:contentDescription="添加到歌单"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            app:backgroundTint="#1E88E5"
+            app:elevation="6dp"
+            app:layout_anchorGravity="end|center_vertical"/>
+    </com.google.android.material.bottomappbar.BottomAppBar>
+</androidx.coordinatorlayout.widget.CoordinatorLayout>

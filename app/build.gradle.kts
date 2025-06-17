@@ -42,4 +42,5 @@ dependencies {
     androidTestImplementation(libs.ext.junit)
     androidTestImplementation(libs.espresso.core)
     implementation("org.jaudiotagger:jaudiotagger:2.0.1")
+    implementation ("com.squareup.okhttp3:okhttp:4.9.3")
 }

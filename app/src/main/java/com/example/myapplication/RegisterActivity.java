@@ -1,24 +1,18 @@
 package com.example.myapplication;
-import android.content.Context;
+
 import android.content.Intent;
 import android.os.Bundle;
-import android.widget.Button;
-import android.widget.EditText;
-import android.widget.Toast;
-
+import android.widget.*;
 import androidx.appcompat.app.AppCompatActivity;
+import okhttp3.*;
 
-import com.example.myapplication.LoginActivity;
-import com.example.myapplication.R;
-
-import java.io.File;
-import java.io.FileOutputStream;
 import java.io.IOException;
 
 public class RegisterActivity extends AppCompatActivity {
-
     private EditText etNewUsername, etNewPassword, etConfirmPassword;
     private Button btnRegister;
+
+    private static final String REGISTER_URL = "http://192.168.183.1:8888/houduan/register";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -31,27 +25,58 @@ public class RegisterActivity extends AppCompatActivity {
         btnRegister = findViewById(R.id.btnRegister);
 
         btnRegister.setOnClickListener(v -> {
-            String username = etNewUsername.getText().toString();
-            String password = etNewPassword.getText().toString();
-            String confirm = etConfirmPassword.getText().toString();
+            String username = etNewUsername.getText().toString().trim();
+            String password = etNewPassword.getText().toString().trim();
+            String confirm = etConfirmPassword.getText().toString().trim();
 
+            if (username.isEmpty() || password.isEmpty() || confirm.isEmpty()) {
+                Toast.makeText(this, "请填写完整信息", Toast.LENGTH_SHORT).show();
+                return;
+            }
             if (!password.equals(confirm)) {
                 Toast.makeText(this, "两次密码不一致", Toast.LENGTH_SHORT).show();
                 return;
             }
 
-            try {
-                FileOutputStream fos = openFileOutput("user.txt", Context.MODE_APPEND);
-                fos.write((username + "," + password + "\n").getBytes());
-                fos.close();
+            registerUser(username, password);
+        });
+    }
 
-                Toast.makeText(this, "注册成功", Toast.LENGTH_SHORT).show();
-                startActivity(new Intent(this, LoginActivity.class));
-                finish();
+    private void registerUser(String username, String password) {
+        OkHttpClient client = new OkHttpClient();
+        RequestBody formBody = new FormBody.Builder()
+                .add("username", username)
+                .add("password", password)
+                .build();
+        Request request = new Request.Builder()
+                .url(REGISTER_URL)
+                .post(formBody)
+                .build();
 
-            } catch (IOException e) {
-                e.printStackTrace();
-                Toast.makeText(this, "注册失败", Toast.LENGTH_SHORT).show();
+        // 打印调试信息
+        String debugUrl = REGISTER_URL + "?username=" + username + "&password=" + password;
+        System.out.println("Register Debug URL: " + debugUrl);
+        // 或者用Log
+        android.util.Log.d("RegisterDebug", "Register Debug URL: " + debugUrl);
+
+        client.newCall(request).enqueue(new Callback() {
+            @Override
+            public void onFailure(Call call, IOException e) {
+                runOnUiThread(() -> Toast.makeText(RegisterActivity.this, "网络错误", Toast.LENGTH_SHORT).show());
+            }
+
+            @Override
+            public void onResponse(Call call, Response response) throws IOException {
+                String resp = response.body().string();
+                runOnUiThread(() -> {
+                    if (resp.contains("success")) {
+                        Toast.makeText(RegisterActivity.this, "注册成功", Toast.LENGTH_SHORT).show();
+                        startActivity(new Intent(RegisterActivity.this, LoginActivity.class));
+                        finish();
+                    } else {
+                        Toast.makeText(RegisterActivity.this, "注册失败：" + resp, Toast.LENGTH_SHORT).show();
+                    }
+                });
             }
         });
     }
