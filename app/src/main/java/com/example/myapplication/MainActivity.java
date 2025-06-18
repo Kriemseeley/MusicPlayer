@@ -5,6 +5,7 @@ import android.app.Activity;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.database.Cursor;
+import android.graphics.Color;
 import android.media.AudioManager;
 import android.media.MediaMetadataRetriever;
 import android.media.MediaPlayer;
@@ -28,11 +29,14 @@ import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.constraintlayout.widget.ConstraintLayout;
 import androidx.recyclerview.widget.ItemTouchHelper;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.LinearSmoothScroller;
 import androidx.recyclerview.widget.RecyclerView;
 import com.google.android.material.button.MaterialButton;
+import com.google.android.material.textfield.TextInputEditText;
+import com.google.android.material.appbar.MaterialToolbar;
 import org.json.JSONArray;
 import org.json.JSONObject;
 import java.io.BufferedReader;
@@ -89,9 +93,17 @@ import okhttp3.HttpUrl;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.Response;
-import com.google.android.material.appbar.MaterialToolbar;
+//import com.google.android.material.appbar.MaterialToolbar;
+//import androidx.view.BlurView;
+//import androidx.view.ViewGroup;
+//import eightbitlab.com.blurview.BlurView;
+//import eightbitlab.com.blurview.RenderEffectBlur;
+//import eightbitlab.com.blurview.RenderScriptBlur;
+//import com.wonderkiln.blurkit.BlurKit;
+
 public class MainActivity extends AppCompatActivity {
     private static final int PICK_AUDIO_REQUEST = 1;
+    private static final int PICK_BACKGROUND_REQUEST = 2;
     // public static final int VIEW_TYPE_EMPTY = 0;
 
     private enum PlayMode {
@@ -108,6 +120,12 @@ public class MainActivity extends AppCompatActivity {
     private static final String PLAYLISTS_FILENAME = "playlists_data.json"; // New filename for all playlists
     private static final String PREFS_NAME = "PlayerPrefs";
     private static final String KEY_LAST_ACTIVE_PLAYLIST_INDEX = "lastActivePlaylistIndex";
+
+    // --- 新增背景管理相关变量 ---
+    private BackgroundManager backgroundManager;
+    private ConstraintLayout mainContentLayout;
+    private ConstraintLayout playbackControlsLayout;
+    private ActivityResultLauncher<Intent> backgroundPickerLauncher;
 
     // --- Replace songList with playlist management ---
     // private List<Song> songList; // REMOVE THIS or comment out
@@ -156,6 +174,26 @@ public class MainActivity extends AppCompatActivity {
         // 移除过渡动画相关代码
         setContentView(R.layout.activity_main);
 
+        // --- 初始化背景管理器 ---
+        backgroundManager = new BackgroundManager(this);
+
+        // --- 注册背景图片选择器 ---
+        backgroundPickerLauncher = registerForActivityResult(
+                new ActivityResultContracts.StartActivityForResult(), result -> {
+                    if (result.getResultCode() == Activity.RESULT_OK && result.getData() != null) {
+                        Uri imageUri = result.getData().getData();
+                        if (imageUri != null) {
+                            // 保存并应用背景
+                            if (backgroundManager.saveBackgroundFromUri(imageUri)) {
+//                                applyBlurEffectToLayouts();
+                                Toast.makeText(this, "背景已更新", Toast.LENGTH_SHORT).show();
+                            } else {
+                                Toast.makeText(this, "背景更新失败", Toast.LENGTH_SHORT).show();
+                            }
+                        }
+                    }
+                });
+
         // songList = new ArrayList<>();
 
         allPlaylists = new ArrayList<>();
@@ -176,6 +214,13 @@ public class MainActivity extends AppCompatActivity {
         RecyclerView songRecyclerView = findViewById(R.id.song_recycler_view);
         prevButton = findViewById(R.id.btn_prev); // Assign member variable
         nextButton = findViewById(R.id.btn_next); // Assign member variable
+
+        // --- 获取需要应用毛玻璃效果的布局 ---
+        mainContentLayout = findViewById(R.id.main_content_layout);
+        playbackControlsLayout = findViewById(R.id.playback_controls);
+
+        // --- 应用毛玻璃效果 ---
+//        applyBlurEffectToLayouts();
 
         // --- Add a check in case the RecyclerView ID is wrong or missing ---
         if (songRecyclerView == null) {
@@ -215,16 +260,18 @@ public class MainActivity extends AppCompatActivity {
         });
         // Button btnLogout = findViewById(R.id.btnLogout);
         // btnLogout = findViewById(R.id.btnLogout);
-//        btnLogout.setOnClickListener(v -> {
-//            SharedPreferences.Editor editor = getSharedPreferences("user_info", MODE_PRIVATE).edit();
-//            editor.putBoolean("isLogin", false);
-//            editor.apply();
-//
-//            Intent intent = new Intent(MainActivity.this, LoginActivity.class);
-//            intent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_NEW_TASK);
-//            startActivity(intent);
-//            finish();
-//        });
+        // btnLogout.setOnClickListener(v -> {
+        // SharedPreferences.Editor editor = getSharedPreferences("user_info",
+        // MODE_PRIVATE).edit();
+        // editor.putBoolean("isLogin", false);
+        // editor.apply();
+        //
+        // Intent intent = new Intent(MainActivity.this, LoginActivity.class);
+        // intent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP |
+        // Intent.FLAG_ACTIVITY_NEW_TASK);
+        // startActivity(intent);
+        // finish();
+        // });
         MaterialToolbar toolbar = findViewById(R.id.toolbar); // ID 改成你 XML 里的 toolbar ID
         setSupportActionBar(toolbar);
         btnDeletePlaylist.setOnClickListener(v -> showDeletePlaylistConfirmation());
@@ -314,9 +361,9 @@ public class MainActivity extends AppCompatActivity {
         itemTouchHelper.attachToRecyclerView(songRecyclerView);
         // 添加在线歌曲 新添加
         // findViewById(R.id.btn_add_online_music).setOnClickListener(v -> {
-        //     animateButton(v);
-        //     Intent intent = new Intent(MainActivity.this, AddOnlineMusicActivity.class);
-        //     startActivityForResult(intent, 2001); // 2001为自定义请求码
+        // animateButton(v);
+        // Intent intent = new Intent(MainActivity.this, AddOnlineMusicActivity.class);
+        // startActivityForResult(intent, 2001); // 2001为自定义请求码
         // });
         // 启动按钮
         findViewById(R.id.btn_play).setOnClickListener(v -> {
@@ -377,7 +424,7 @@ public class MainActivity extends AppCompatActivity {
                 stoppedAtIndex = -1;
             }
         });
-       
+
         // 暂停按钮
         findViewById(R.id.btn_pause).setOnClickListener(v -> {
             animateButton(v);
@@ -452,6 +499,79 @@ public class MainActivity extends AppCompatActivity {
             switchPlayMode();
         });
         setDefaultCoverArt();
+
+        // 初始化BlurKit
+//        BlurKit.init(this);
+    }
+
+    /**
+     * 应用毛玻璃效果到指定布局
+     */
+//    private void applyBlurEffectToLayouts() {
+//        if (backgroundManager != null) {
+//            // 优化模糊参数
+//            float blurRadius = 20.0f; // 降低模糊半径以提高性能
+//            int overlayColor = Color.argb(40, 255, 255, 255); // 降低叠加层透明度
+//
+//            // 应用毛玻璃效果到各个布局
+//            backgroundManager.applyBlurredBackground(mainContentLayout, blurRadius, overlayColor);
+//            backgroundManager.applyBlurredBackground(playbackControlsLayout, blurRadius, overlayColor);
+//
+//            // 设置背景模糊视图
+//            View blurBackground = findViewById(R.id.blur_background);
+//            if (blurBackground != null) {
+//                blurBackground.setBackground(BlurKit.getInstance().blur(blurBackground, (int) blurRadius));
+//                blurBackground.getBackground().setAlpha(255 - Color.alpha(overlayColor));
+//            }
+//        }
+//    }
+
+    /**
+     * 打开背景选择器
+     */
+    private void openBackgroundPicker() {
+        Intent intent = new Intent(Intent.ACTION_PICK);
+        intent.setType("image/*");
+        backgroundPickerLauncher.launch(intent);
+    }
+
+    @Override
+    public boolean onCreateOptionsMenu(Menu menu) {
+        getMenuInflater().inflate(R.menu.main_menu, menu);
+        return true;
+    }
+
+    @Override
+    public boolean onOptionsItemSelected(MenuItem item) {
+        Log.d("MenuDebug", "菜单点击: " + item.getItemId());
+        int id = item.getItemId();
+        if (id == R.id.action_add_online_music) {
+            // 跳转到添加在线音乐页面
+            Intent addIntent = new Intent(this, AddOnlineMusicActivity.class);
+            startActivity(addIntent);
+            return true;
+        } else if (id == R.id.btnLogout) {
+            SharedPreferences.Editor editor = getSharedPreferences("user_info", MODE_PRIVATE).edit();
+            editor.clear();
+            editor.apply();
+            // 跳转到登录页并清空返回栈
+            Intent logoutIntent = new Intent(this, LoginActivity.class);
+            logoutIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+            startActivity(logoutIntent);
+            finishAffinity(); // 彻底清理Activity栈
+            return true;
+        } else if (id == R.id.action_change_background) {
+            // 打开背景选择器
+            openBackgroundPicker();
+            return true;
+        } else if (id == R.id.action_reset_background) {
+            // 重置为默认背景
+            backgroundManager.clearCustomBackground();
+//            applyBlurEffectToLayouts();
+            Toast.makeText(this, "已恢复默认背景", Toast.LENGTH_SHORT).show();
+            return true;
+        }
+        return super.onOptionsItemSelected(item);
     }
 
     private void notifyPlayOnlineSong(String songid) {
@@ -479,35 +599,6 @@ public class MainActivity extends AppCompatActivity {
         return null; // Or return a default empty playlist if preferred
     }
 
-    @Override
-    public boolean onCreateOptionsMenu(Menu menu) {
-        getMenuInflater().inflate(R.menu.main_menu, menu);
-        return true;
-    }
-
-   
-    @Override
-    public boolean onOptionsItemSelected(MenuItem item) {
-        Log.d("MenuDebug", "菜单点击: " + item.getItemId());
-        int id = item.getItemId();
-        if (id == R.id.action_add_online_music) {
-            // 跳转到添加在线音乐页面
-            Intent addIntent = new Intent(this, AddOnlineMusicActivity.class);
-            startActivity(addIntent);
-            return true;
-        } else if (id == R.id.btnLogout) {
-            SharedPreferences.Editor editor = getSharedPreferences("user_info", MODE_PRIVATE).edit();
-            editor.clear();
-            editor.apply();
-            // 跳转到登录页并清空返回栈
-            Intent logoutIntent = new Intent(this, LoginActivity.class);
-            logoutIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
-            startActivity(logoutIntent);
-            finishAffinity(); // 彻底清理Activity栈
-            return true;
-        }
-        return super.onOptionsItemSelected(item);
-    }
     private void copyUriToTempFile(Uri uri, File tempFile) throws IOException {
         InputStream inputStream = null;
         OutputStream outputStream = null;

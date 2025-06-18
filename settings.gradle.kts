@@ -17,9 +17,10 @@ dependencyResolutionManagement {
         google()
         maven { url = uri("https://maven.aliyun.com/repository/public") }
         mavenCentral()
+        maven(url = "https://jitpack.io")
     }
 }
 
-rootProject.name = "My Application"
+rootProject.name = "MusicPlayer"
 include(":app")
  

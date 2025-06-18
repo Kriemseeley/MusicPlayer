@@ -32,8 +32,8 @@
         
         <!-- 动画持续时间 -->
         <item name="android:windowActivityTransitions">true</item>
-        <item name="android:windowEnterTransition">@transition/fade_through</item>
-        <item name="android:windowExitTransition">@transition/fade_through</item>
+        <item name="android:windowEnterTransition">@anim/fade_through</item>
+        <item name="android:windowExitTransition">@anim/fade_through</item>
         
         <!-- 按钮样式 -->
         <item name="materialButtonStyle">@style/Widget.MusicPlayer.Button</item>

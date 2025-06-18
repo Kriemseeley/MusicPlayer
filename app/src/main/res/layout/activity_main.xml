@@ -5,7 +5,6 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="?attr/colorSurface">
-
     <!-- 顶部工具栏 -->
     <com.google.android.material.appbar.AppBarLayout
         android:id="@+id/appbar"
@@ -308,6 +307,7 @@
                 app:layout_constraintEnd_toEndOf="parent">
 
                 <androidx.constraintlayout.widget.ConstraintLayout
+                    android:id="@+id/main_content_layout"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:padding="@dimen/spacing_sm">
