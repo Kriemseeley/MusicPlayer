@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+    
+    <item
+        android:id="@+id/action_change_background"
+        android:title="更换背景"
+        android:icon="@drawable/ic_add_song"
+        app:showAsAction="never"/>
+    
+    <item
+        android:id="@+id/action_reset_background"
+        android:title="恢复默认背景"
+        android:icon="@drawable/ic_delete_song"
+        app:showAsAction="never"/>
+    
+    <item
+        android:id="@+id/action_add_online_music"
+        android:title="添加在线音乐"
+        android:icon="@drawable/ic_add_song"
+        app:showAsAction="never"/>
+    
+    <item
+        android:id="@+id/btnLogout"
+        android:title="退出"
+        android:icon="@drawable/ic_logout"
+        app:showAsAction="never"/>
+</menu> 

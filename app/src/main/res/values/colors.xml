@@ -29,4 +29,5 @@
     
     <!-- 红色系列 -->
     <color name="red_700">#D32F2F</color>
+    <color name="ic_launcher_background">#FFFFFF</color>
 </resources>

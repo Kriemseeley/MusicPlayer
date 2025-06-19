@@ -1,21 +1,26 @@
 package com.example.myapplication;
 
+import android.Manifest;
 import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.content.pm.PackageManager;
 import android.database.Cursor;
 import android.graphics.Color;
+import android.graphics.drawable.Drawable;
 import android.media.AudioManager;
 import android.media.MediaMetadataRetriever;
 import android.media.MediaPlayer;
 import android.net.Uri;
-import java.net.URLConnection; // Needed for MimeTypeMap fallback
+import android.os.Build;
+import java.net.URLConnection;
 
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.Window;
-import android.webkit.MimeTypeMap; // Needed for MimeTypeMap fallback
+import android.view.ViewGroup;
+import android.webkit.MimeTypeMap;
 import android.os.Bundle;
 import android.os.Handler;
 import android.provider.OpenableColumns;
@@ -93,13 +98,10 @@ import okhttp3.HttpUrl;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.Response;
-//import com.google.android.material.appbar.MaterialToolbar;
-//import androidx.view.BlurView;
-//import androidx.view.ViewGroup;
-//import eightbitlab.com.blurview.BlurView;
-//import eightbitlab.com.blurview.RenderEffectBlur;
-//import eightbitlab.com.blurview.RenderScriptBlur;
-//import com.wonderkiln.blurkit.BlurKit;
+
+import eightbitlab.com.blurview.BlurView;
+import eightbitlab.com.blurview.RenderEffectBlur;
+import eightbitlab.com.blurview.RenderScriptBlur;
 
 public class MainActivity extends AppCompatActivity {
     private static final int PICK_AUDIO_REQUEST = 1;
@@ -168,6 +170,13 @@ public class MainActivity extends AppCompatActivity {
         }
     };
 
+    // BlurView 相关变量
+    // private BlurView blurViewTop;
+    private BlurView blurViewPlayMode;
+    private BlurView blurViewProgress;
+    private BlurView blurViewControls;
+    private BlurView blurViewPlaylist;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -175,7 +184,6 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
 
         // --- 初始化背景管理器 ---
-        backgroundManager = new BackgroundManager(this);
 
         // --- 注册背景图片选择器 ---
         backgroundPickerLauncher = registerForActivityResult(
@@ -185,7 +193,7 @@ public class MainActivity extends AppCompatActivity {
                         if (imageUri != null) {
                             // 保存并应用背景
                             if (backgroundManager.saveBackgroundFromUri(imageUri)) {
-//                                applyBlurEffectToLayouts();
+                                // applyBlurEffectToLayouts();
                                 Toast.makeText(this, "背景已更新", Toast.LENGTH_SHORT).show();
                             } else {
                                 Toast.makeText(this, "背景更新失败", Toast.LENGTH_SHORT).show();
@@ -220,7 +228,7 @@ public class MainActivity extends AppCompatActivity {
         playbackControlsLayout = findViewById(R.id.playback_controls);
 
         // --- 应用毛玻璃效果 ---
-//        applyBlurEffectToLayouts();
+        // applyBlurEffectToLayouts();
 
         // --- Add a check in case the RecyclerView ID is wrong or missing ---
         if (songRecyclerView == null) {
@@ -501,38 +509,110 @@ public class MainActivity extends AppCompatActivity {
         setDefaultCoverArt();
 
         // 初始化BlurKit
-//        BlurKit.init(this);
+        // BlurKit.init(this);
+
+        // 初始化所有 BlurView
+        // blurViewTop = findViewById(R.id.blur_view_top);
+        blurViewPlayMode = findViewById(R.id.blur_view_play_mode);
+        blurViewProgress = findViewById(R.id.blur_view_progress);
+        blurViewControls = findViewById(R.id.blur_view_controls);
+        blurViewPlaylist = findViewById(R.id.blur_view_playlist);
+
+        setupAllBlurViews();
+
+        backgroundManager = new BackgroundManager(this);
+    }
+
+    private void setupAllBlurViews() {
+        float radius = 20f;
+        View decorView = getWindow().getDecorView();
+        ViewGroup rootView = decorView.findViewById(android.R.id.content);
+        Drawable windowBackground = decorView.getBackground();
+
+        // 设置所有 BlurView
+        // setupBlurView(rootView, windowBackground, radius);
+        setupBlurView(blurViewPlayMode, rootView, windowBackground, radius);
+        setupBlurView(blurViewProgress, rootView, windowBackground, radius);
+        setupBlurView(blurViewControls, rootView, windowBackground, radius);
+        setupBlurView(blurViewPlaylist, rootView, windowBackground, radius);
+    }
+
+    private void setupBlurView(BlurView blurView, ViewGroup rootView, Drawable windowBackground, float radius) {
+        blurView.setupWith(rootView, new RenderScriptBlur(this))
+                .setFrameClearDrawable(windowBackground)
+                .setBlurRadius(radius)
+                .setBlurAutoUpdate(true);
     }
 
     /**
      * 应用毛玻璃效果到指定布局
      */
-//    private void applyBlurEffectToLayouts() {
-//        if (backgroundManager != null) {
-//            // 优化模糊参数
-//            float blurRadius = 20.0f; // 降低模糊半径以提高性能
-//            int overlayColor = Color.argb(40, 255, 255, 255); // 降低叠加层透明度
-//
-//            // 应用毛玻璃效果到各个布局
-//            backgroundManager.applyBlurredBackground(mainContentLayout, blurRadius, overlayColor);
-//            backgroundManager.applyBlurredBackground(playbackControlsLayout, blurRadius, overlayColor);
-//
-//            // 设置背景模糊视图
-//            View blurBackground = findViewById(R.id.blur_background);
-//            if (blurBackground != null) {
-//                blurBackground.setBackground(BlurKit.getInstance().blur(blurBackground, (int) blurRadius));
-//                blurBackground.getBackground().setAlpha(255 - Color.alpha(overlayColor));
-//            }
-//        }
-//    }
+    // private void applyBlurEffectToLayouts() {
+    // if (backgroundManager != null) {
+    // // 优化模糊参数
+    // float blurRadius = 20.0f; // 降低模糊半径以提高性能
+    // int overlayColor = Color.argb(40, 255, 255, 255); // 降低叠加层透明度
+    //
+    // // 应用毛玻璃效果到各个布局
+    // backgroundManager.applyBlurredBackground(mainContentLayout, blurRadius,
+    // overlayColor);
+    // backgroundManager.applyBlurredBackground(playbackControlsLayout, blurRadius,
+    // overlayColor);
+    //
+    // // 设置背景模糊视图
+    // View blurBackground = findViewById(R.id.blur_background);
+    // if (blurBackground != null) {
+    // blurBackground.setBackground(BlurKit.getInstance().blur(blurBackground, (int)
+    // blurRadius));
+    // blurBackground.getBackground().setAlpha(255 - Color.alpha(overlayColor));
+    // }
+    // }
+    // }
 
     /**
      * 打开背景选择器
      */
     private void openBackgroundPicker() {
-        Intent intent = new Intent(Intent.ACTION_PICK);
+        // 检查并请求权限
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            // Android 13及以上使用新的媒体权限
+            if (checkSelfPermission(Manifest.permission.READ_MEDIA_IMAGES) != PackageManager.PERMISSION_GRANTED) {
+                requestPermissions(new String[] { Manifest.permission.READ_MEDIA_IMAGES }, PICK_BACKGROUND_REQUEST);
+                return;
+            }
+        } else {
+            // Android 13以下使用存储权限
+            if (checkSelfPermission(Manifest.permission.READ_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
+                requestPermissions(new String[] { Manifest.permission.READ_EXTERNAL_STORAGE }, PICK_BACKGROUND_REQUEST);
+                return;
+            }
+        }
+
+        // 创建文件选择器意图
+        Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT);
+        intent.addCategory(Intent.CATEGORY_OPENABLE);
         intent.setType("image/*");
+        intent.putExtra(Intent.EXTRA_MIME_TYPES, new String[] {
+                "image/jpeg",
+                "image/png",
+                "image/webp"
+        });
+        intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION);
         backgroundPickerLauncher.launch(intent);
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions,
+            @NonNull int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        if (requestCode == PICK_BACKGROUND_REQUEST) {
+            if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                // 权限被授予，重新打开选择器
+                openBackgroundPicker();
+            } else {
+                Toast.makeText(this, "需要存储权限才能选择背景图片", Toast.LENGTH_SHORT).show();
+            }
+        }
     }
 
     @Override
@@ -567,7 +647,7 @@ public class MainActivity extends AppCompatActivity {
         } else if (id == R.id.action_reset_background) {
             // 重置为默认背景
             backgroundManager.clearCustomBackground();
-//            applyBlurEffectToLayouts();
+            // applyBlurEffectToLayouts();
             Toast.makeText(this, "已恢复默认背景", Toast.LENGTH_SHORT).show();
             return true;
         }

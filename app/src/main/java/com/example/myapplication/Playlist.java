@@ -20,7 +20,7 @@ public class Playlist {
     // Constructor for creating a new playlist
     public Playlist(String name) {
         this.name = name;
-        this.songs = new ArrayList<>();
+        this.songs = new ArrayList<>(); 
     }
 
     // Constructor for loading from JSON
