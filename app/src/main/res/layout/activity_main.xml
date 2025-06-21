@@ -320,6 +320,19 @@
                             app:iconTint="?attr/colorPrimary"
                             app:iconSize="@dimen/icon_size_md"
                             app:layout_constraintStart_toEndOf="@id/btn_stop"
+                            app:layout_constraintEnd_toStartOf="@id/btn_test_flip"
+                            app:layout_constraintTop_toTopOf="parent"/>
+
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/btn_test_flip"
+                            style="@style/Widget.MaterialComponents.Button.TextButton.Icon"
+                            android:layout_width="@dimen/control_button_size"
+                            android:layout_height="@dimen/control_button_size"
+                            app:iconPadding="0dp"
+                            android:contentDescription="测试封面翻转"
+                            app:icon="@drawable/ic_music_note"
+                            app:iconTint="?attr/colorPrimary"
+                            app:iconSize="@dimen/icon_size_md"
                             app:layout_constraintEnd_toEndOf="parent"
                             app:layout_constraintTop_toTopOf="parent"/>
 

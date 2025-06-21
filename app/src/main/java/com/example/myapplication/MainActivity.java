@@ -107,6 +107,7 @@ import eightbitlab.com.blurview.RenderScriptBlur;
 public class MainActivity extends AppCompatActivity {
     private static final int PICK_AUDIO_REQUEST = 1;
     private static final int PICK_BACKGROUND_REQUEST = 2;
+    private static final int RECORD_AUDIO_PERMISSION_REQUEST = 3;
     // public static final int VIEW_TYPE_EMPTY = 0;
 
     private enum PlayMode {
@@ -373,13 +374,16 @@ public class MainActivity extends AppCompatActivity {
 
         ItemTouchHelper itemTouchHelper = new ItemTouchHelper(callback);
         itemTouchHelper.attachToRecyclerView(songRecyclerView);
+
+        // 设置封面翻转动画
+        setupCoverFlipAnimation();
+
         // 添加在线歌曲 新添加
         // findViewById(R.id.btn_add_online_music).setOnClickListener(v -> {
         // animateButton(v);
         // Intent intent = new Intent(MainActivity.this, AddOnlineMusicActivity.class);
         // startActivityForResult(intent, 2001); // 2001为自定义请求码
         // });
-
 
         // 启动按钮
         findViewById(R.id.btn_play).setOnClickListener(v -> {
@@ -406,6 +410,12 @@ public class MainActivity extends AppCompatActivity {
                     isPreparing = false; // Not preparing anymore
                     tvStatus.setText("正在播放");
                     handler.post(updateProgressRunnable);
+
+                    // 更新可视化器状态
+                    if (visualizerManager != null) {
+                        visualizerManager.updatePlayingState(true);
+                    }
+
                     // Ensure highlight is correct
                     if (songAdapter != null)
                         songAdapter.setPlayingPosition(currentPlayingIndex);
@@ -452,6 +462,12 @@ public class MainActivity extends AppCompatActivity {
                     isPlaying = false;
                     tvStatus.setText("已暂停");
                     handler.removeCallbacks(updateProgressRunnable);
+
+                    // 更新可视化器状态
+                    if (visualizerManager != null) {
+                        visualizerManager.updatePlayingState(false);
+                    }
+
                     // No need to handle playerThread here if using the handler approach
                 }
             }
@@ -479,6 +495,22 @@ public class MainActivity extends AppCompatActivity {
         nextButton.setOnClickListener(v -> {
             animateButton(v);
             playNext();
+        });
+
+        // 测试封面翻转按钮
+        findViewById(R.id.btn_test_flip).setOnClickListener(v -> {
+            animateButton(v);
+            if (flipAnimator != null) {
+                if (flipAnimator.isShowingFront()) {
+                    Log.d("TestFlip", "Flipping to back (visualizer)");
+                    flipAnimator.flipToBack();
+                } else {
+                    Log.d("TestFlip", "Flipping to front (cover)");
+                    flipAnimator.flipToFront();
+                }
+            } else {
+                Log.w("TestFlip", "flipAnimator is null");
+            }
         });
         // 进度条
         seekBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
@@ -529,30 +561,42 @@ public class MainActivity extends AppCompatActivity {
         setupAllBlurViews();
 
         backgroundManager = new BackgroundManager(this);
+
+        // 检查录音权限（音频可视化需要）
+        checkRecordAudioPermission();
     }
 
-    // private void setupCoverFlipAnimation() {
-    //     // 1. 创建容器
-    //     coverContainer = findViewById(R.id.cover_container); // 需要在XML中添加
+    private void checkRecordAudioPermission() {
+        if (checkSelfPermission(Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
+            Log.d("Permission", "Requesting RECORD_AUDIO permission");
+            requestPermissions(new String[] { Manifest.permission.RECORD_AUDIO }, RECORD_AUDIO_PERMISSION_REQUEST);
+        } else {
+            Log.d("Permission", "RECORD_AUDIO permission already granted");
+        }
+    }
 
-    //     // 2. 获取封面ImageView引用
-    //     ImageView coverImageView = findViewById(R.id.iv_cover_art);
+    private void setupCoverFlipAnimation() {
+        // 1. 获取容器
+        coverContainer = findViewById(R.id.cover_container);
 
-    //     // 3. 创建波形可视化视图
-    //     visualizerView = new AudioVisualizerView(this);
-    //     FrameLayout.LayoutParams params = new FrameLayout.LayoutParams(
-    //             ViewGroup.LayoutParams.MATCH_PARENT,
-    //             ViewGroup.LayoutParams.MATCH_PARENT);
-    //     visualizerView.setLayoutParams(params);
-    //     coverContainer.addView(visualizerView);
-    //     visualizerView.setVisibility(View.GONE);
+        // 2. 获取封面卡片View的引用
+        View coverCard = findViewById(R.id.cover_card);
 
-    //     // 4. 创建翻转动画管理器
-    //     flipAnimator = new CoverFlipAnimator(coverContainer, coverImageView, visualizerView);
+        // 3. 创建波形可视化视图
+        visualizerView = new AudioVisualizerView(this);
+        FrameLayout.LayoutParams params = new FrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.MATCH_PARENT);
+        visualizerView.setLayoutParams(params);
+        coverContainer.addView(visualizerView);
+        visualizerView.setVisibility(View.GONE);
 
-    //     // 5. 创建可视化管理器
-    //     visualizerManager = new AudioVisualizerManager(visualizerView);
-    // }
+        // 4. 创建翻转动画管理器，使用 coverCard 作为正面
+        flipAnimator = new CoverFlipAnimator(coverContainer, coverCard, visualizerView);
+
+        // 5. 创建可视化管理器
+        visualizerManager = new AudioVisualizerManager(visualizerView);
+    }
 
     private void setupAllBlurViews() {
         float radius = 20f;
@@ -643,6 +687,14 @@ public class MainActivity extends AppCompatActivity {
             } else {
                 Toast.makeText(this, "需要存储权限才能选择背景图片", Toast.LENGTH_SHORT).show();
             }
+        } else if (requestCode == RECORD_AUDIO_PERMISSION_REQUEST) {
+            if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                Log.d("Permission", "RECORD_AUDIO permission granted");
+                Toast.makeText(this, "音频可视化功能已启用", Toast.LENGTH_SHORT).show();
+            } else {
+                Log.w("Permission", "RECORD_AUDIO permission denied");
+                Toast.makeText(this, "需要录音权限才能显示音频可视化效果", Toast.LENGTH_SHORT).show();
+            }
         }
     }
 
@@ -685,23 +737,23 @@ public class MainActivity extends AppCompatActivity {
         return super.onOptionsItemSelected(item);
     }
 
-    private void notifyPlayOnlineSong(String songid) {
-        OkHttpClient client = new OkHttpClient();
-        HttpUrl url = HttpUrl.parse("http://192.168.183.1:8888/houduan/play")
-                .newBuilder()
-                .addQueryParameter("songid", songid)
-                .build();
-        Request request = new Request.Builder().url(url).get().build();
-        client.newCall(request).enqueue(new Callback() {
-            @Override
-            public void onFailure(Call call, IOException e) {
-            }
-
-            @Override
-            public void onResponse(Call call, Response response) throws IOException {
-            }
-        });
-    }
+    // private void notifyPlayOnlineSong(String songid) {
+    // OkHttpClient client = new OkHttpClient();
+    // HttpUrl url = HttpUrl.parse("http://192.168.183.1:8888/houduan/play")
+    // .newBuilder()
+    // .addQueryParameter("songid", songid)
+    // .build();
+    // Request request = new Request.Builder().url(url).get().build();
+    // client.newCall(request).enqueue(new Callback() {
+    // @Override
+    // public void onFailure(Call call, IOException e) {
+    // }
+    //
+    // @Override
+    // public void onResponse(Call call, Response response) throws IOException {
+    // }
+    // });
+    // }
 
     private Playlist getCurrentPlaylist() {
         if (allPlaylists != null && currentPlaylistIndex >= 0 && currentPlaylistIndex < allPlaylists.size()) {
@@ -1136,8 +1188,29 @@ public class MainActivity extends AppCompatActivity {
                         Log.d("Playback", "Adapter highlight set for index: " + currentPlayingIndex);
                     }
                     scrollToPlayingItem(currentPlayingIndex);
-                    // visualizerManager.setupVisualizer(mediaPlayer);
-                    // visualizerManager.updatePlayingState(true);
+
+                    // 设置可视化器（如果已初始化）
+                    if (visualizerManager != null) {
+                        // 检查录音权限
+                        if (checkSelfPermission(
+                                Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED) {
+                            Log.d("Playback", "Setting up visualizer for MediaPlayer");
+                            visualizerManager.setupVisualizer(mediaPlayer);
+                            visualizerManager.updatePlayingState(true);
+                            Log.d("Playback", "Visualizer setup completed");
+                        } else {
+                            Log.w("Playback", "RECORD_AUDIO permission not granted, visualizer not available");
+                            Toast.makeText(this, "需要录音权限才能显示音频可视化", Toast.LENGTH_SHORT).show();
+                        }
+                    } else {
+                        Log.w("Playback", "VisualizerManager is null");
+                    }
+
+                    // 触发封面翻转动画
+                    if (flipAnimator != null) {
+                        flipAnimator.startFlipAnimation();
+                    }
+
                     // Update UI status
                     TextView tvStatus = findViewById(R.id.tv_status);
                     TextView currentSongTextView = findViewById(R.id.tv_current_song_name);
@@ -2134,10 +2207,15 @@ public class MainActivity extends AppCompatActivity {
             handler.removeCallbacks(updateProgressRunnable);
             // Save state *before* releasing the player
             savePlaybackState();
-            // if (visualizerManager != null) {
-            //     visualizerManager.updatePlayingState(false);
-            //     visualizerManager.releaseVisualizer();
-            // }
+            if (visualizerManager != null) {
+                visualizerManager.updatePlayingState(false);
+                visualizerManager.releaseVisualizer();
+            }
+
+            // 停止封面翻转动画
+            if (flipAnimator != null) {
+                flipAnimator.stopFlipAnimation();
+            }
 
             if (currentPlayingIndex != -1) {
                 stoppedAtIndex = currentPlayingIndex;
@@ -2318,9 +2396,9 @@ public class MainActivity extends AppCompatActivity {
         // Save final state before destroying
         saveAllPlaylists(); // Save the playlist structure
         savePlaybackState(); // Save the playback position/status
-        // if (visualizerManager != null) {
-        //     visualizerManager.releaseVisualizer();
-        // }
+        if (visualizerManager != null) {
+            visualizerManager.releaseVisualizer();
+        }
         // Release MediaPlayer resources
         if (mediaPlayer != null) {
             if (mediaPlayer.isPlaying()) {
