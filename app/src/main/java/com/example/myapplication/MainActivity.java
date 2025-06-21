@@ -26,6 +26,7 @@ import android.os.Handler;
 import android.provider.OpenableColumns;
 import android.util.Log;
 import android.widget.Button;
+import android.widget.FrameLayout;
 import android.widget.SeekBar;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -111,6 +112,11 @@ public class MainActivity extends AppCompatActivity {
     private enum PlayMode {
         LOOP, SHUFFLE, SINGLE
     }
+
+    private AudioVisualizerView visualizerView;
+    private AudioVisualizerManager visualizerManager;
+    private CoverFlipAnimator flipAnimator;
+    private ViewGroup coverContainer;
 
     private ImageView coverArtImageView; // Add reference for the ImageView
     private ExecutorService backgroundExecutor;
@@ -373,6 +379,8 @@ public class MainActivity extends AppCompatActivity {
         // Intent intent = new Intent(MainActivity.this, AddOnlineMusicActivity.class);
         // startActivityForResult(intent, 2001); // 2001为自定义请求码
         // });
+
+
         // 启动按钮
         findViewById(R.id.btn_play).setOnClickListener(v -> {
             animateButton(v);
@@ -522,6 +530,29 @@ public class MainActivity extends AppCompatActivity {
 
         backgroundManager = new BackgroundManager(this);
     }
+
+    // private void setupCoverFlipAnimation() {
+    //     // 1. 创建容器
+    //     coverContainer = findViewById(R.id.cover_container); // 需要在XML中添加
+
+    //     // 2. 获取封面ImageView引用
+    //     ImageView coverImageView = findViewById(R.id.iv_cover_art);
+
+    //     // 3. 创建波形可视化视图
+    //     visualizerView = new AudioVisualizerView(this);
+    //     FrameLayout.LayoutParams params = new FrameLayout.LayoutParams(
+    //             ViewGroup.LayoutParams.MATCH_PARENT,
+    //             ViewGroup.LayoutParams.MATCH_PARENT);
+    //     visualizerView.setLayoutParams(params);
+    //     coverContainer.addView(visualizerView);
+    //     visualizerView.setVisibility(View.GONE);
+
+    //     // 4. 创建翻转动画管理器
+    //     flipAnimator = new CoverFlipAnimator(coverContainer, coverImageView, visualizerView);
+
+    //     // 5. 创建可视化管理器
+    //     visualizerManager = new AudioVisualizerManager(visualizerView);
+    // }
 
     private void setupAllBlurViews() {
         float radius = 20f;
@@ -1087,6 +1118,7 @@ public class MainActivity extends AppCompatActivity {
                 mediaPlayer.setOnPreparedListener(mp -> {
                     Log.d("Playback", "MediaPlayer prepared for: " + song.getName());
 
+                    isPreparing = false; // 标记准备已完成
                     stoppedAtIndex = -1;
                     seekBar.setMax(mp.getDuration());
                     mp.start(); // Start playback
@@ -1095,12 +1127,17 @@ public class MainActivity extends AppCompatActivity {
                     songAdapter.setPlayingPosition(position); // Highlight in adapter
                     handler.post(updateProgressRunnable); // Start progress updates
 
+                    // 重新启用导航按钮
+                    setNavigationButtonsEnabled(true);
+
                     if (songAdapter != null) {
                         // Use setPlayingPosition which handles notifying previous and current items
                         songAdapter.setPlayingPosition(currentPlayingIndex);
                         Log.d("Playback", "Adapter highlight set for index: " + currentPlayingIndex);
                     }
                     scrollToPlayingItem(currentPlayingIndex);
+                    // visualizerManager.setupVisualizer(mediaPlayer);
+                    // visualizerManager.updatePlayingState(true);
                     // Update UI status
                     TextView tvStatus = findViewById(R.id.tv_status);
                     TextView currentSongTextView = findViewById(R.id.tv_current_song_name);
@@ -1397,13 +1434,9 @@ public class MainActivity extends AppCompatActivity {
     // --- Location: MainActivity.java ---
     private void playPrevious() {
         // animateButton(v);
-        // --- Disable immediately for better responsiveness ---
-        setNavigationButtonsEnabled(false); // Keep this
-
         Playlist currentPlaylist = getCurrentPlaylist();
         if (currentPlaylist == null || currentPlaylist.getSongCount() == 0) {
             Toast.makeText(this, "歌单为空", Toast.LENGTH_SHORT).show();
-            setNavigationButtonsEnabled(true); // Re-enable if returning early
             return;
         }
 
@@ -1457,8 +1490,6 @@ public class MainActivity extends AppCompatActivity {
         } else {
             Log.e("PlayPrevious",
                     "Failed to determine a valid previous position. Final calculated index: " + prevPosition);
-            // Re-enable buttons if we don't proceed to playSong
-            setNavigationButtonsEnabled(true);
             // Optionally play the first song as a fallback if calculation fails
             if (songCount > 0) {
                 Log.w("PlayPrevious", "Fallback: Playing first song (index 0).");
@@ -1469,7 +1500,6 @@ public class MainActivity extends AppCompatActivity {
 
     private void playNext() {
         // animateButton(v);
-        setNavigationButtonsEnabled(false);
         Playlist currentPlaylist = getCurrentPlaylist();
         if (currentPlaylist == null || currentPlaylist.getSongs().isEmpty()) {
             Toast.makeText(this, "歌单为空", Toast.LENGTH_SHORT).show();
@@ -1525,7 +1555,6 @@ public class MainActivity extends AppCompatActivity {
             Log.e("PlayNext", "Calculated invalid next position: " + nextPosition + " (current index: "
                     + currentPlayingIndex + ", mode: " + currentPlayMode + ")");
             // Fallback: Play the first song if calculation somehow failed
-            setNavigationButtonsEnabled(true);
             if (songCount > 0)
                 playSong(0);
         }
@@ -2105,6 +2134,10 @@ public class MainActivity extends AppCompatActivity {
             handler.removeCallbacks(updateProgressRunnable);
             // Save state *before* releasing the player
             savePlaybackState();
+            // if (visualizerManager != null) {
+            //     visualizerManager.updatePlayingState(false);
+            //     visualizerManager.releaseVisualizer();
+            // }
 
             if (currentPlayingIndex != -1) {
                 stoppedAtIndex = currentPlayingIndex;
@@ -2285,7 +2318,9 @@ public class MainActivity extends AppCompatActivity {
         // Save final state before destroying
         saveAllPlaylists(); // Save the playlist structure
         savePlaybackState(); // Save the playback position/status
-
+        // if (visualizerManager != null) {
+        //     visualizerManager.releaseVisualizer();
+        // }
         // Release MediaPlayer resources
         if (mediaPlayer != null) {
             if (mediaPlayer.isPlaying()) {
