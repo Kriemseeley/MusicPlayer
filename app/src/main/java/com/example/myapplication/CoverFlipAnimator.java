@@ -34,11 +34,14 @@ public class CoverFlipAnimator {
         backView.setOnClickListener(v -> flipToFront());
     }
 
+    /**
+     * 开始播放时触发的动画（如果需要）
+     */
     public void startFlipAnimation() {
-        // 开始播放时，自动翻转到波形可视化
-        if (isShowingFront && !isAnimating) {
-            flipToBack();
-        }
+        // 开始播放时，不再自动翻转到波形可视化，保持封面状态
+        // if (isShowingFront && !isAnimating) {
+        // flipToBack();
+        // }
     }
 
     public void stopFlipAnimation() {

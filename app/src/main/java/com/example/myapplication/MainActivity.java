@@ -143,7 +143,7 @@ public class MainActivity extends AppCompatActivity {
 
     // --- UI Elements for Playlist Management ---
     private Spinner playlistSpinner;
-
+    private BlurBackgroundView blurBackgroundView;
     private ArrayAdapter<String> playlistSpinnerAdapter;
     private MaterialButton btnAddPlaylist; // Add Button ID in XML
     private MaterialButton btnDeletePlaylist; // Add Button ID in XML
@@ -189,7 +189,7 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         // 移除过渡动画相关代码
         setContentView(R.layout.activity_main);
-
+        blurBackgroundView = findViewById(R.id.blur_background_view);
         // --- 初始化背景管理器 ---
 
         // --- 注册背景图片选择器 ---
@@ -1276,8 +1276,10 @@ public class MainActivity extends AppCompatActivity {
 
         if (songRecyclerView != null && layoutManager instanceof LinearLayoutManager) { // Check if it's
                                                                                         // LinearLayoutManager
-            // Use post to ensure scrolling happens after layout calculations might have
-            // settled
+                                                                                        // Use post to ensure scrolling
+                                                                                        // happens after layout
+                                                                                        // calculations might have
+                                                                                        // settled
             songRecyclerView.post(() -> {
                 Log.d("Scroll", "Attempting to smooth scroll to position: " + position);
 
@@ -2201,113 +2203,70 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void stopPlayback() {
-        synchronized (this) {
-            Log.d("Playback", "Stopping playback.");
-            shouldAutoPlay = false; // Prevent auto-restart
-            handler.removeCallbacks(updateProgressRunnable);
-            // Save state *before* releasing the player
-            savePlaybackState();
-            if (visualizerManager != null) {
-                visualizerManager.updatePlayingState(false);
-                visualizerManager.releaseVisualizer();
-            }
-
-            // 停止封面翻转动画
-            if (flipAnimator != null) {
-                flipAnimator.stopFlipAnimation();
-            }
-
-            if (currentPlayingIndex != -1) {
-                stoppedAtIndex = currentPlayingIndex;
-                Log.d("Playback", "Stored stopped index: " + stoppedAtIndex);
-            }
-
-            savePlaybackState(); // Save state before releasing
-
-            if (mediaPlayer != null) {
-                if (mediaPlayer.isPlaying()) {
-                    mediaPlayer.stop();
-                    Log.d("Playback", "MediaPlayer stopped.");
-                }
-                // Reset the player to release resources and allow setting a new source later
-                try {
-                    mediaPlayer.reset();
-                    Log.d("Playback", "MediaPlayer reset.");
-                } catch (IllegalStateException e) {
-                    Log.w("MediaPlayer", "Reset failed during stop, releasing.", e);
-                    mediaPlayer.release();
-                    mediaPlayer = null;
-                }
-
-            }
-
-            // Reset playback state variables
-            isPlaying = false;
-            currentPlayingIndex = -1; // Reset the index when explicitly stopped
-            handler.removeCallbacks(updateProgressRunnable);
-
-            // Clear UI
-            updateProgressText(0, 0);
-            seekBar.setProgress(0);
-            seekBar.setMax(100); // Default max
-            TextView currentSongTextView = findViewById(R.id.tv_current_song_name);
-            TextView tvStatus = findViewById(R.id.tv_status);
-            currentSongTextView.setText("未选择歌曲");
-            tvStatus.setText("已停止");
-            setDefaultCoverArt();
-            songAdapter.setPlayingPosition(-1); // Clear highlight
-
-            // Interrupt old thread if still using that pattern (updateProgressRunnable
-            // makes it less necessary)
-            // if (playerThread != null) { ... }
-
+        isPlaying = false;
+        if (adapter != null) {
+            adapter.setPlayingPosition(-1);
         }
+        if (mediaPlayer != null) {
+            if (mediaPlayer.isPlaying()) {
+                mediaPlayer.stop();
+            }
+            mediaPlayer.reset();
+        }
+        handler.removeCallbacks(updateProgressRunnable);
+        seekBar.setProgress(0);
+        updateProgressText(0, 0);
+        findViewById(R.id.btn_pause).setBackgroundResource(R.drawable.ic_play_song);
+
+        // 可视化视图也需要重置
+        if (visualizerView != null) {
+            visualizerView.setPlaying(false);
+        }
+
+        // 设置默认封面
+        setDefaultCoverArt();
     }
 
-    // 从 MP3 文件中提取封面图片并显示在 ImageView 上
-    // 从 MP3 文件中提取封面图片并显示在 ImageView 上
     private void setDefaultCoverArt() {
         runOnUiThread(() -> {
             if (coverArtImageView != null) {
-                // Use your placeholder drawable resource ID
                 coverArtImageView.setImageResource(R.drawable.default_cover_placeholder);
+            }
+            if (blurBackgroundView != null) {
+                blurBackgroundView.setCover(null);
             }
         });
     }
 
-    /**
-     * Extracts cover art from the Song's file using Jaudiotagger (in background)
-     * and updates the ImageView on the UI thread.
-     * Handles SAF URIs by copying to a temporary file.
-     * 
-     * @param song The song whose cover art needs to be extracted.
-     */
-
-    // 添加封面提取和显示方法
     private void extractAndDisplayCoverArt(Song song) {
-        try {
-            Uri songUri = Uri.parse(song.getFilePath());
-            File tempFile = File.createTempFile("temp_audio", ".mp3", getCacheDir());
-            copyUriToTempFile(songUri, tempFile); // 使用已有方法复制文件
-
-            AudioFile audioFile = AudioFileIO.read(tempFile);
-            Tag tag = audioFile.getTag();
-            if (tag != null) {
-                Artwork artwork = tag.getFirstArtwork();
-                if (artwork != null) {
-                    final Bitmap coverBitmap = BitmapFactory.decodeByteArray(artwork.getBinaryData(), 0,
-                            artwork.getBinaryData().length);
-                    runOnUiThread(() -> coverArtImageView.setImageBitmap(coverBitmap));
-                    return;
-                }
-            }
-        } catch (CannotReadException | IOException | TagException | ReadOnlyFileException
-                | InvalidAudioFrameException e) {
-            Log.e("CoverArt", "读取封面失败", e);
+        if (backgroundExecutor == null || backgroundExecutor.isShutdown()) {
+            backgroundExecutor = Executors.newSingleThreadExecutor();
         }
+        backgroundExecutor.execute(() -> {
+            Bitmap coverArt = null;
+            try {
+                Uri uri = Uri.parse(song.getFilePath());
+                MediaMetadataRetriever retriever = new MediaMetadataRetriever();
+                retriever.setDataSource(this, uri);
+                byte[] art = retriever.getEmbeddedPicture();
+                if (art != null) {
+                    coverArt = BitmapFactory.decodeByteArray(art, 0, art.length);
+                }
+                retriever.release();
+            } catch (Exception e) {
+                Log.e("CoverArt", "Error extracting cover art", e);
+            }
 
-        // 如果失败，设置默认封面
-        runOnUiThread(this::setDefaultCoverArt);
+            final Bitmap finalCoverArt = coverArt;
+            runOnUiThread(() -> {
+                if (finalCoverArt != null) {
+                    coverArtImageView.setImageBitmap(finalCoverArt);
+                    blurBackgroundView.setCover(finalCoverArt);
+                } else {
+                    setDefaultCoverArt();
+                }
+            });
+        });
     }
 
     private boolean isValidAudioExtension(String extension) {
