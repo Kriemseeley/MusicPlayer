@@ -1,29 +1,31 @@
 package com.example.myapplication;
 
-import android.app.ActivityOptions;
 import android.content.Intent;
 import android.os.Build;
 import android.os.Bundle;
+import android.view.View;
+import android.view.Window;
 import android.widget.*;
 import androidx.appcompat.app.AppCompatActivity;
 import okhttp3.*;
+import android.transition.Fade;
 
 import java.io.IOException;
 
 public class RegisterActivity extends AppCompatActivity {
     private EditText etNewUsername, etNewPassword, etConfirmPassword;
-    private Button btnRegister;
+    private Button btnRegister, btnBackToLogin;
 
     private static final String REGISTER_URL = "http://192.168.183.1:8888/houduan/register";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        Intent intent = new Intent(this, MainActivity.class);
+        // 在setContentView之前设置过渡动画
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-            startActivity(intent, ActivityOptions.makeSceneTransitionAnimation(this).toBundle());
-        } else {
-            startActivity(intent);
+            getWindow().requestFeature(Window.FEATURE_ACTIVITY_TRANSITIONS);
+            getWindow().setEnterTransition(new Fade());
+            getWindow().setExitTransition(new Fade());
         }
         setContentView(R.layout.activity_register);
 
@@ -31,8 +33,10 @@ public class RegisterActivity extends AppCompatActivity {
         etNewPassword = findViewById(R.id.etRegisterPassword);
         etConfirmPassword = findViewById(R.id.etConfirmPassword);
         btnRegister = findViewById(R.id.btnRegister);
+        btnBackToLogin = findViewById(R.id.btnBackToLogin);
 
         btnRegister.setOnClickListener(v -> {
+            animateButton(v);
             String username = etNewUsername.getText().toString().trim();
             String password = etNewPassword.getText().toString().trim();
             String confirm = etConfirmPassword.getText().toString().trim();
@@ -48,6 +52,16 @@ public class RegisterActivity extends AppCompatActivity {
 
             registerUser(username, password);
         });
+
+        btnBackToLogin.setOnClickListener(v -> {
+            animateButton(v);
+            finish(); // 返回登录页面
+        });
+    }
+
+    private void animateButton(View v) {
+        v.animate().scaleX(0.92f).scaleY(0.92f).setDuration(75)
+                .withEndAction(() -> v.animate().scaleX(1f).scaleY(1f).setDuration(75).start()).start();
     }
 
     private void registerUser(String username, String password) {
@@ -79,8 +93,7 @@ public class RegisterActivity extends AppCompatActivity {
                 runOnUiThread(() -> {
                     if (resp.contains("success")) {
                         Toast.makeText(RegisterActivity.this, "注册成功", Toast.LENGTH_SHORT).show();
-                        startActivity(new Intent(RegisterActivity.this, LoginActivity.class));
-                        finish();
+                        finish(); // 返回登录页面
                     } else {
                         Toast.makeText(RegisterActivity.this, "注册失败：" + resp, Toast.LENGTH_SHORT).show();
                     }

@@ -60,6 +60,17 @@ public class CoverFlipAnimator {
         return isShowingFront;
     }
 
+    /**
+     * 智能翻转 - 根据当前状态决定翻转方向
+     */
+    public void flip() {
+        if (isShowingFront) {
+            flipToBack();
+        } else {
+            flipToFront();
+        }
+    }
+
     public void flipToBack() {
         if (!isShowingFront || isAnimating)
             return;

@@ -29,7 +29,7 @@ import java.util.concurrent.Executors;
 public class BlurBackgroundView extends ImageView {
 
     private static final int TRANSITION_DURATION_MS = 300;
-    private static final float BLUR_RADIUS = 5f;
+    private static final float BLUR_RADIUS = 25f;
     private static final float SCALE_FACTOR = 1.2f;
 
     private final ExecutorService backgroundExecutor = Executors.newSingleThreadExecutor();

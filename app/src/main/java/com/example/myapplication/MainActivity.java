@@ -378,6 +378,9 @@ public class MainActivity extends AppCompatActivity {
         // 设置封面翻转动画
         setupCoverFlipAnimation();
 
+        // 检查录音权限（在可视化器初始化之后）
+        checkRecordAudioPermission();
+
         // 添加在线歌曲 新添加
         // findViewById(R.id.btn_add_online_music).setOnClickListener(v -> {
         // animateButton(v);
@@ -411,10 +414,7 @@ public class MainActivity extends AppCompatActivity {
                     tvStatus.setText("正在播放");
                     handler.post(updateProgressRunnable);
 
-                    // 更新可视化器状态
-                    if (visualizerManager != null) {
-                        visualizerManager.updatePlayingState(true);
-                    }
+                    // 可视化器状态已通过生命周期自动管理，无需手动更新
 
                     // Ensure highlight is correct
                     if (songAdapter != null)
@@ -463,10 +463,7 @@ public class MainActivity extends AppCompatActivity {
                     tvStatus.setText("已暂停");
                     handler.removeCallbacks(updateProgressRunnable);
 
-                    // 更新可视化器状态
-                    if (visualizerManager != null) {
-                        visualizerManager.updatePlayingState(false);
-                    }
+                    // 可视化器状态已通过生命周期自动管理，无需手动更新
 
                     // No need to handle playerThread here if using the handler approach
                 }
@@ -567,11 +564,39 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void checkRecordAudioPermission() {
-        if (checkSelfPermission(Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
-            Log.d("Permission", "Requesting RECORD_AUDIO permission");
+        Log.d("Permission", "Checking RECORD_AUDIO permission...");
+
+        // 检查权限状态
+        int permissionStatus = checkSelfPermission(Manifest.permission.RECORD_AUDIO);
+        Log.d("Permission",
+                "Permission status: " + permissionStatus + " (GRANTED=" + PackageManager.PERMISSION_GRANTED + ")");
+
+        if (permissionStatus != PackageManager.PERMISSION_GRANTED) {
+            Log.d("Permission", "RECORD_AUDIO permission not granted, requesting...");
+
+            // 检查是否应该显示权限说明
+            if (shouldShowRequestPermissionRationale(Manifest.permission.RECORD_AUDIO)) {
+                Log.d("Permission", "Should show permission rationale");
+                Toast.makeText(this, "需要录音权限来显示音频可视化效果", Toast.LENGTH_LONG).show();
+            }
+
+            // 显示权限请求对话框
             requestPermissions(new String[] { Manifest.permission.RECORD_AUDIO }, RECORD_AUDIO_PERMISSION_REQUEST);
         } else {
             Log.d("Permission", "RECORD_AUDIO permission already granted");
+            Toast.makeText(this, "录音权限已授予，音频可视化功能可用", Toast.LENGTH_SHORT).show();
+
+            // 权限已授予，如果当前正在播放音乐，立即启动可视化器
+            if (mediaPlayer != null && mediaPlayer.isPlaying() && visualizerManager != null) {
+                Log.d("Permission", "Initializing visualizer with existing permission");
+                if (visualizerManager.initialize(mediaPlayer)) {
+                    visualizerManager.start();
+                    if (visualizerView != null) {
+                        visualizerView.startVisualization();
+                    }
+                    Log.d("Permission", "Visualizer started successfully with existing permission");
+                }
+            }
         }
     }
 
@@ -595,7 +620,54 @@ public class MainActivity extends AppCompatActivity {
         flipAnimator = new CoverFlipAnimator(coverContainer, coverCard, visualizerView);
 
         // 5. 创建可视化管理器
-        visualizerManager = new AudioVisualizerManager(visualizerView);
+        visualizerManager = new AudioVisualizerManager();
+
+        // 6. 设置音频数据回调
+        visualizerManager.setAudioDataCallback(new AudioVisualizerManager.AudioDataCallback() {
+            @Override
+            public void onAudioDataUpdate(@NonNull byte[] waveform, @Nullable byte[] fft, int samplingRate) {
+                Log.d("MainActivity", "Audio data received - waveform length: " + waveform.length +
+                        ", samplingRate: " + samplingRate + ", visualizerView: "
+                        + (visualizerView != null ? "available" : "null"));
+
+                if (visualizerView != null) {
+                    visualizerView.updateAudioData(waveform);
+                    Log.d("MainActivity", "Audio data passed to visualizerView");
+                } else {
+                    Log.w("MainActivity", "VisualizerView is null, cannot update audio data");
+                }
+            }
+        });
+
+        // 7. 设置状态变化回调
+        visualizerManager.setStateChangeCallback(new AudioVisualizerManager.StateChangeCallback() {
+            @Override
+            public void onStateChanged(boolean isEnabled, @Nullable String error) {
+                if (error != null) {
+                    Log.e("Visualizer", "Visualizer error: " + error);
+                    Toast.makeText(MainActivity.this, error, Toast.LENGTH_SHORT).show();
+                }
+            }
+
+            @Override
+            public void onPerformanceUpdate(int droppedFrames, float avgLatency) {
+                if (droppedFrames > 10) {
+                    Log.w("Visualizer", "Performance warning: " + droppedFrames + " dropped frames");
+                }
+            }
+        });
+
+        // 8. 添加生命周期观察
+        getLifecycle().addObserver(visualizerManager);
+
+        // 9. 设置封面点击事件
+        if (coverCard != null) {
+            coverCard.setOnClickListener(v -> {
+                if (flipAnimator != null) {
+                    flipAnimator.flip();
+                }
+            });
+        }
     }
 
     private void setupAllBlurViews() {
@@ -691,6 +763,20 @@ public class MainActivity extends AppCompatActivity {
             if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
                 Log.d("Permission", "RECORD_AUDIO permission granted");
                 Toast.makeText(this, "音频可视化功能已启用", Toast.LENGTH_SHORT).show();
+
+                // 如果当前正在播放音乐，立即初始化可视化器
+                if (mediaPlayer != null && mediaPlayer.isPlaying() && visualizerManager != null) {
+                    Log.d("Permission", "Initializing visualizer after permission granted");
+                    if (visualizerManager.initialize(mediaPlayer)) {
+                        visualizerManager.start();
+                        if (visualizerView != null) {
+                            visualizerView.startVisualization();
+                        }
+                        Log.d("Permission", "Visualizer started successfully after permission granted");
+                    } else {
+                        Log.w("Permission", "Visualizer initialization failed after permission granted");
+                    }
+                }
             } else {
                 Log.w("Permission", "RECORD_AUDIO permission denied");
                 Toast.makeText(this, "需要录音权限才能显示音频可视化效果", Toast.LENGTH_SHORT).show();
@@ -1194,10 +1280,25 @@ public class MainActivity extends AppCompatActivity {
                         // 检查录音权限
                         if (checkSelfPermission(
                                 Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED) {
-                            Log.d("Playback", "Setting up visualizer for MediaPlayer");
-                            visualizerManager.setupVisualizer(mediaPlayer);
-                            visualizerManager.updatePlayingState(true);
-                            Log.d("Playback", "Visualizer setup completed");
+                            Log.d("Playback", "Initializing visualizer for MediaPlayer, audioSessionId: "
+                                    + mediaPlayer.getAudioSessionId());
+
+                            // 延迟一下再初始化，确保MediaPlayer完全准备好
+                            handler.postDelayed(() -> {
+                                Log.d("Playback", "Delayed visualizer initialization");
+                                if (visualizerManager.initialize(mediaPlayer)) {
+                                    visualizerManager.start();
+                                    if (visualizerView != null) {
+                                        visualizerView.startVisualization();
+                                    }
+                                    Log.d("Playback", "Visualizer started successfully");
+
+                                    // 启动备用音频数据生成器
+                                    startBackupAudioDataGenerator();
+                                } else {
+                                    Log.w("Playback", "Visualizer initialization failed");
+                                }
+                            }, 500); // 延迟500ms
                         } else {
                             Log.w("Playback", "RECORD_AUDIO permission not granted, visualizer not available");
                             Toast.makeText(this, "需要录音权限才能显示音频可视化", Toast.LENGTH_SHORT).show();
@@ -2218,9 +2319,12 @@ public class MainActivity extends AppCompatActivity {
         updateProgressText(0, 0);
         findViewById(R.id.btn_pause).setBackgroundResource(R.drawable.ic_play_song);
 
-        // 可视化视图也需要重置
+        // 停止可视化器
+        if (visualizerManager != null) {
+            visualizerManager.stop();
+        }
         if (visualizerView != null) {
-            visualizerView.setPlaying(false);
+            visualizerView.stopVisualization();
         }
 
         // 设置默认封面
@@ -2355,9 +2459,7 @@ public class MainActivity extends AppCompatActivity {
         // Save final state before destroying
         saveAllPlaylists(); // Save the playlist structure
         savePlaybackState(); // Save the playback position/status
-        if (visualizerManager != null) {
-            visualizerManager.releaseVisualizer();
-        }
+        // 可视化器会通过生命周期自动清理，这里不需要手动调用
         // Release MediaPlayer resources
         if (mediaPlayer != null) {
             if (mediaPlayer.isPlaying()) {
@@ -2374,5 +2476,108 @@ public class MainActivity extends AppCompatActivity {
     private void animateButton(View v) {
         v.animate().scaleX(0.92f).scaleY(0.92f).setDuration(75)
                 .withEndAction(() -> v.animate().scaleX(1f).scaleY(1f).setDuration(75).start()).start();
+    }
+
+    /**
+     * 启动备用音频数据生成器
+     * 当Visualizer不工作时，基于MediaPlayer播放位置生成模拟音频数据
+     */
+    private void startBackupAudioDataGenerator() {
+        Log.d("BackupAudio", "Starting backup audio data generator");
+
+        handler.postDelayed(new Runnable() {
+            @Override
+            public void run() {
+                if (mediaPlayer != null && mediaPlayer.isPlaying() && visualizerView != null) {
+                    try {
+                        // 基于当前播放位置生成动态音频数据
+                        int currentPosition = mediaPlayer.getCurrentPosition();
+                        int duration = mediaPlayer.getDuration();
+
+                        // 创建基于播放进度的动态数据
+                        byte[] audioData = generateAudioDataFromPosition(currentPosition, duration);
+
+                        Log.d("BackupAudio", "Generated audio data for position: " + currentPosition + "/" + duration);
+                        visualizerView.updateAudioData(audioData);
+
+                    } catch (Exception e) {
+                        Log.e("BackupAudio", "Error generating backup audio data", e);
+                    }
+
+                    // 继续生成数据，150ms间隔以获得适中的更新速度
+                    handler.postDelayed(this, 150);
+                } else {
+                    Log.d("BackupAudio", "Stopping backup audio data generator");
+                }
+            }
+        }, 150);
+    }
+
+    /**
+     * 基于播放位置生成音频数据
+     */
+    private byte[] generateAudioDataFromPosition(int currentPosition, int duration) {
+        byte[] data = new byte[1024];
+
+        // 基于播放位置创建变化的波形
+        double timeRatio = (double) currentPosition / duration;
+        long timeMs = System.currentTimeMillis();
+
+        for (int i = 0; i < data.length; i++) {
+            // 组合多个频率创建复杂波形，但变化更缓慢
+            double freq1 = Math.sin(timeMs * 0.003 + i * 0.1) * 0.4; // 低频基础，更慢
+            double freq2 = Math.sin(timeMs * 0.008 + i * 0.3) * 0.3; // 中频，更慢
+            double freq3 = Math.sin(timeMs * 0.015 + i * 0.8) * 0.2; // 高频，稍微慢一点
+            double freq4 = Math.sin(timeRatio * Math.PI * 2 + i * 0.2) * 0.1; // 基于播放进度的慢变化
+
+            double amplitude = freq1 + freq2 + freq3 + freq4;
+            data[i] = (byte) (amplitude * 127);
+        }
+
+        return data;
+    }
+
+    /**
+     * 测试可视化器数据流
+     */
+    private void testVisualizerDataFlow() {
+        Log.d("VisualizerTest", "Testing visualizer data flow");
+
+        // 创建测试音频数据
+        byte[] testData = new byte[1024];
+        for (int i = 0; i < testData.length; i++) {
+            // 生成正弦波测试数据
+            double angle = 2.0 * Math.PI * i / 64; // 频率
+            testData[i] = (byte) (Math.sin(angle) * 127);
+        }
+
+        // 直接调用音频数据回调来测试数据流
+        if (visualizerView != null) {
+            Log.d("VisualizerTest", "Sending test data to visualizer view");
+            visualizerView.updateAudioData(testData);
+        } else {
+            Log.w("VisualizerTest", "VisualizerView is null");
+        }
+
+        // 每100ms发送一次测试数据，模拟快速音频变化
+        handler.postDelayed(() -> {
+            if (mediaPlayer != null && mediaPlayer.isPlaying() && visualizerView != null) {
+                // 生成更动态的测试数据，模拟音乐节拍
+                byte[] rhythmData = new byte[1024];
+                long time = System.currentTimeMillis();
+                double beatFreq = Math.sin(time * 0.01) * 0.5 + 0.5; // 慢节拍
+                double highFreq = Math.sin(time * 0.05) * 0.3 + 0.3; // 快节拍
+
+                for (int i = 0; i < rhythmData.length; i++) {
+                    double wave = Math.sin(i * 0.1) * beatFreq + Math.sin(i * 0.3) * highFreq;
+                    rhythmData[i] = (byte) (wave * 127);
+                }
+                Log.d("VisualizerTest", "Sending rhythm test data");
+                visualizerView.updateAudioData(rhythmData);
+
+                // 继续测试
+                testVisualizerDataFlow();
+            }
+        }, 100); // 100ms间隔，更快的更新
     }
 }

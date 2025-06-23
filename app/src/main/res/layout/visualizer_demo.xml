@@ -1,0 +1,132 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 
+    音频可视化组件演示布局
+    展示如何在布局中使用AudioVisualizerView
+-->
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/black">
+
+    <!-- 全屏可视化器 -->
+    <com.example.myapplication.AudioVisualizerView
+        android:id="@+id/fullscreen_visualizer"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent" />
+
+    <!-- 小型可视化器 - 适合嵌入到其他布局中 -->
+    <com.google.android.material.card.MaterialCardView
+        android:id="@+id/mini_visualizer_card"
+        android:layout_width="200dp"
+        android:layout_height="100dp"
+        app:cardCornerRadius="12dp"
+        app:cardElevation="8dp"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        android:layout_margin="16dp">
+
+        <com.example.myapplication.AudioVisualizerView
+            android:id="@+id/mini_visualizer"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:background="@color/black" />
+
+    </com.google.android.material.card.MaterialCardView>
+
+    <!-- 控制按钮 -->
+    <LinearLayout
+        android:id="@+id/control_buttons"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        android:layout_marginBottom="32dp">
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btn_start_visualizer"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="开始"
+            android:layout_marginEnd="8dp" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btn_stop_visualizer"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="停止"
+            android:layout_marginStart="8dp" />
+
+    </LinearLayout>
+
+    <!-- 配置选项 -->
+    <com.google.android.material.card.MaterialCardView
+        android:id="@+id/config_card"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        app:cardCornerRadius="8dp"
+        app:cardElevation="4dp"
+        app:layout_constraintTop_toBottomOf="@id/mini_visualizer_card"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        android:layout_margin="16dp">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="16dp">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="可视化器配置"
+                android:textSize="16sp"
+                android:textStyle="bold"
+                android:layout_marginBottom="12dp" />
+
+            <!-- 柱形数量滑块 -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="柱形数量: 32"
+                android:id="@+id/tv_bar_count" />
+
+            <com.google.android.material.slider.Slider
+                android:id="@+id/slider_bar_count"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:valueFrom="16"
+                android:valueTo="64"
+                android:value="32"
+                android:stepSize="4"
+                android:layout_marginBottom="8dp" />
+
+            <!-- 振幅缩放滑块 -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="振幅缩放: 1.5x"
+                android:id="@+id/tv_amplitude_scale" />
+
+            <com.google.android.material.slider.Slider
+                android:id="@+id/slider_amplitude_scale"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:valueFrom="0.5"
+                android:valueTo="3.0"
+                android:value="1.5"
+                android:stepSize="0.1" />
+
+        </LinearLayout>
+
+    </com.google.android.material.card.MaterialCardView>
+
+</androidx.constraintlayout.widget.ConstraintLayout> 
